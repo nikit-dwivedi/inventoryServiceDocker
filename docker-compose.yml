@@ -1,0 +1,25 @@
+version : '3'
+
+services:
+    lb:
+        image: haproxy
+        ports:
+            - "8084:8080"
+        volumes:
+            - ./haproxy:/usr/local/etc/haproxy
+    inventoryservice1:
+        image: inventoryservice
+        environment:
+            - APPID=1111
+    inventoryservice2:
+        image: inventoryservice
+        environment:
+            - APPID=2222
+    inventoryservice3:
+        image: inventoryservice
+        environment:
+            - APPID=3333
+    inventoryservice4:
+        image: inventoryservice
+        environment:
+            - APPID=4444
