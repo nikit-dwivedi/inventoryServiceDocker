@@ -1,6 +1,6 @@
 const productModel = require('../models/product.model');
 const { randomBytes } = require('node:crypto');
-const { getCategoryById } = require('./category.helper');
+const { getCategoryById, addProductToCategory } = require('./category.helper');
 const { customizationFormatter, customItemFormatter, responseFormater } = require('./format.helper');
 const outletModel = require('../models/outlet.model');
 const variationModel = require('../models/variation.model');
@@ -33,6 +33,7 @@ exports.addProduct = async (bodyData) => {
         }
         const saveProduct = new productModel(formattedData)
         await saveProduct.save()
+        await addProductToCategory(parentCategoryId)
         return { status: true, message: "product added", data: formattedData.productId }
     } catch (error) {
         console.log(error);
@@ -71,7 +72,7 @@ exports.editProductByProductId = async (productId, bodyData) => {
 }
 
 
-exports.allProductOfCategory = async (parentCategoryId) => {
+exports.allProductOfCategory = async (parentCategoryId, role) => {
     try {
         // const options = {
         //     page: 1,
@@ -145,7 +146,8 @@ exports.productSearch = async (searchText, outletList) => {
             {
                 $match: {
                     productNameWithoutSpaces: { $regex: searchText.replace(/\s+/g, ''), $options: 'i' },
-                    outletId: { $in: idList }
+                    outletId: { $in: idList },
+                    inStock: true
                 }
             },
             {
@@ -258,7 +260,7 @@ exports.customizationListByProductId = async (productId) => {
 
 exports.productByLastVariation = async (productId, previousData) => {
     try {
-        let productData = await productModel.findOne({ productId }).select("-_id productId outletId productName productImage productPrice isVeg displayPrice hasCustomization hasAddOn")
+        let productData = await productModel.findOne({ productId, inStock: true }).select("-_id productId outletId productName productImage productPrice isVeg displayPrice hasCustomization hasAddOn")
         if (productData) {
             if (previousData) {
                 productData._doc.variationDetail = previousData

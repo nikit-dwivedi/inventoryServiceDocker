@@ -4,18 +4,20 @@ const { menuFormater } = require("../helpers/menu.helper");
 const { cartInit, outletByOutletId } = require("../helpers/outlet.helper");
 const { addProduct, allProductOfCategory, productById, customizationByProductId, customItemBycostomItemId, filterCustomItem, addCustomizationByProductId, editCustomizationByProductId, addCustomItemBycustomizationId, editCustomItemByCustomItemId, changeStockStatus, getOutOfStockProduct, customItemByCustomId, customizationByCustomizationId, productByLastVariation, addRemoveAddOnToProduct, editProductByProductId } = require("../helpers/product.helper");
 const { success, badRequest, unknownError } = require("../helpers/response.helper");
+const { parseJwt } = require("../middleware/authToken");
 const { imageUpload } = require("../services/image.service");
 
 exports.getMenu = async (req, res) => {
     try {
         const { outletId } = req.params
         const { productId, page } = req.query
-        console.log("token ===>",req.headers.authorization);
+        // console.log("token ===>", req.headers.authorization);
+        // const token = parseJwt(req.headers.authorization)
         if (isNaN(parseInt(page)) || parseInt(page) === 0) {
             return badRequest(res, "page parameter must be a number and greater than 0")
         }
         let categoryData = await getAllCategoryOfOutlet(outletId, page)
-        let menu = await menuFormater(categoryData.docs, productId)
+        let menu = await menuFormater(categoryData.docs, productId,)
         let data = {
             itemCount: categoryData.totalDocs,
             totalPage: categoryData.totalPages,
@@ -129,7 +131,8 @@ exports.outOfStockProduct = async (req, res) => {
 exports.getProductByCategory = async (req, res) => {
     try {
         const { parentCategoryId } = req.params
-        const productData = await allProductOfCategory(parentCategoryId);
+        const token = parseJwt(req.headers.authorization)
+        const productData = await allProductOfCategory(parentCategoryId, token.role);
         return productData ? res.send({ status: true, subcode: 200, items: productData }) : res.send({ status: false, subcode: 400 })
     } catch (error) {
         res.send({ status: false, subcode: 400 })
@@ -228,7 +231,7 @@ exports.addCustomItem = async (req, res) => {
 exports.editCustomItem = async (req, res) => {
     try {
         const { variantId } = req.body
-        const { status, message } = await editCustomItemByCustomItemId(variantId,  req.body);
+        const { status, message } = await editCustomItemByCustomItemId(variantId, req.body);
         return status ? success(res, message) : badRequest(res, message)
     } catch (error) {
 
@@ -285,8 +288,8 @@ exports.addNewAddOnCategory = async (req, res) => {
 
 exports.editAddOnCategoryDetails = async (req, res) => {
     try {
-        const {addOnCategoryId } = req.body
-        const { status, message, data } = await editAddonCategory(addOnCategoryId,req.body)
+        const { addOnCategoryId } = req.body
+        const { status, message, data } = await editAddonCategory(addOnCategoryId, req.body)
         return status ? success(res, message) : badRequest(res, message)
     } catch (error) {
         return unknownError(res, error.message)
@@ -304,8 +307,8 @@ exports.addNewAddOnProduct = async (req, res) => {
 
 exports.editAddOnProductDetails = async (req, res) => {
     try {
-        const {addOnProductId } = req.body
-        const { status, message } = await editAddonProduct(addOnProductId,req.body)
+        const { addOnProductId } = req.body
+        const { status, message } = await editAddonProduct(addOnProductId, req.body)
         return status ? success(res, message) : badRequest(res, message)
     } catch (error) {
         return unknownError(res, error.message)

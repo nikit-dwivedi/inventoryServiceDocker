@@ -28,6 +28,10 @@ const categorySchema = new Schema({
         type: Boolean,
         default: false
     },
+    hasProduct: {
+        type: Boolean,
+        default: false
+    },
     isActive: {
         type: Boolean,
         default: true,

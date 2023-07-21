@@ -27,22 +27,31 @@ exports.addSubCategoryToCategory = async (categoryId) => {
     }
 }
 
+exports.addProductToCategory = async (categoryId) => {
+    try {
+        await categoryModel.findOneAndUpdate({ categoryId }, { hasProduct: true });
+        return true
+    } catch (error) {
+        return false
+    }
+}
+
 exports.getAllSubCategory = async (parentCategoryId) => {
     try {
-        const data = await categoryModel.find({ parentCategoryId }).select('-_id categoryId hasSubCategory categoryImage categoryDesc categoryName');
+        const data = await categoryModel.find({ parentCategoryId }).select('-_id categoryId hasSubCategory hasProduct categoryImage categoryDesc categoryName');
         return data
     } catch (error) {
         return false
     }
 }
 
-exports.getAllCategoryOfOutlet = async (outletId,page) => {
+exports.getAllCategoryOfOutlet = async (outletId, page) => {
     try {
         const options = {
             page: page,
             limit: 1,
             sort: { createdAt: -1 },
-            select: '-_id categoryId hasSubCategory categoryImage categoryDesc categoryName isVeg'
+            select: '-_id categoryId hasSubCategory hasProduct categoryImage categoryDesc categoryName isVeg'
         };
         const data = await categoryModel.paginate({ outletId, parentCategoryId: "" }, options);
         return data
@@ -53,7 +62,7 @@ exports.getAllCategoryOfOutlet = async (outletId,page) => {
 }
 exports.getOnlyCategoryOfOutlet = async (outletId) => {
     try {
-        const data = await categoryModel.find({ outletId, parentCategoryId: "" }).select('-_id categoryId hasSubCategory categoryImage categoryDesc categoryName');
+        const data = await categoryModel.find({ outletId, parentCategoryId: "" }).select('-_id categoryId hasSubCategory hasProduct categoryImage categoryDesc categoryName');
         return data[0] ? data : false
     } catch (error) {
         return false
@@ -62,7 +71,7 @@ exports.getOnlyCategoryOfOutlet = async (outletId) => {
 
 exports.getSubCategoryOfOutlet = async (parentCategoryId) => {
     try {
-        const data = await categoryModel.find({ parentCategoryId }).select('-_id categoryId hasSubCategory categoryImage categoryDesc categoryName');
+        const data = await categoryModel.find({ parentCategoryId }).select('-_id categoryId hasSubCategory hasProduct categoryImage categoryDesc categoryName');
         return data[0] ? data : false
     } catch (error) {
         return false

@@ -52,25 +52,45 @@ exports.outletsBySellerId = async (sellerId, mode) => {
             return responseFormater(false, "invalid mode", {})
         }
         let query = (mode != undefined) ? { sellerId, isActive: true, isClosed: mode } : { sellerId, isActive: true }
-        const outletList = await outletModel.find(query).select('-_id outletId outletName area phone outletImage isClosed shopAddress longitude latitude');
+        const outletList = await outletModel.find(query).select('-_id outletId outletName area phone outletImage isClosed shopAddress longitude latitude isDiscounted discountId').lean();
         if (outletList[0]) {
             for (const element of outletList) {
-                element._doc.initCount = 0
-                element._doc.pendingCount = 0
-                element._doc.preperingCount = 0
-                element._doc.readyCount = 0
-                element._doc.dispatchedCount = 0
-                element._doc.deliveredCount = 0
-                element._doc.cancelledCount = 0
+                let discountData = {
+                    discountId: "",
+                    customId: "",
+                    discountTitle: "",
+                    promoCode: "",
+                    discountPercent: 0,
+                    maxDiscount: 0,
+                    minAmount: 0,
+                    isFlatDiscount: false,
+                    isCustom: false
+                }
+                if (element.isDiscounted) {
+                    const { status, data } = await discountByDiscountId(element.discountId)
+                    if (status) {
+                        discountData = data
+                    } else {
+                        isDiscounted = false
+                    }
+                }
+                element.discountData = discountData
+                element.initCount = 0
+                element.pendingCount = 0
+                element.preperingCount = 0
+                element.readyCount = 0
+                element.dispatchedCount = 0
+                element.deliveredCount = 0
+                element.cancelledCount = 0
                 count = await this.getOrderCount(element.outletId)
                 if (count) {
-                    element._doc.initCount = count.initCount
-                    element._doc.pendingCount = count.pendingCount
-                    element._doc.preperingCount = count.preperingCount
-                    element._doc.readyCount = count.readyCount
-                    element._doc.dispatchedCount = count.dispatchedCount
-                    element._doc.deliveredCount = count.deliveredCount
-                    element._doc.cancelledCount = count.cancelledCount
+                    element.initCount = count.initCount
+                    element.pendingCount = count.pendingCount
+                    element.preperingCount = count.preperingCount
+                    element.readyCount = count.readyCount
+                    element.dispatchedCount = count.dispatchedCount
+                    element.deliveredCount = count.deliveredCount
+                    element.cancelledCount = count.cancelledCount
                 }
             }
         }
