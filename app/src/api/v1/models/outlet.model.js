@@ -1,4 +1,5 @@
 const mongoose = require("mongoose")
+const mongoosePaginate = require('mongoose-paginate-v2');
 const Schema = mongoose.Schema
 
 const timingSchema = new Schema({
@@ -44,11 +45,14 @@ const outletSchema = new Schema({
     outletImage: {
         type: Array
     },
+    outletBanner: {
+        type: Array
+    },
     type: {
         type: String
     },
-    phone:{
-        type:Number
+    phone: {
+        type: Number
     },
     preparationTime: {
         type: String
@@ -63,6 +67,10 @@ const outletSchema = new Schema({
     isDiscounted: {
         type: Boolean,
         default: false
+    },
+    bankId: {
+        type: String,
+        default: ""
     },
     discountId: {
         type: String,
@@ -153,6 +161,7 @@ const outletSchema = new Schema({
 })
 outletSchema.index({ location: "2dsphere" });
 outletSchema.index({ outletName: 'text' });
+outletSchema.plugin(mongoosePaginate)
 const outletModel = mongoose.model("Outlet", outletSchema)
 
 module.exports = outletModel

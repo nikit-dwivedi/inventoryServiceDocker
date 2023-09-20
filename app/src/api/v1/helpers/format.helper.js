@@ -4,7 +4,7 @@ exports.responseFormater = (status, message, data = {}) => {
     return { status, message, data }
 }
 exports.outletFormmater = (sellerId, bodyData, cuisines) => {
-    const { outletName, phone,type, isFood = false, area, shopAddress, outletImage, longitude, latitude, preparationTime, isPureVeg = false, isDiscounted = false, discountId = "", tag = [] } = bodyData;
+    const { outletName, phone, type, isFood = false, area, shopAddress, outletImage,outletBanner, longitude, latitude, preparationTime, isPureVeg = false, isDiscounted = false, discountId = "", tag = [] } = bodyData;
     const location = {
         'type': 'Point',
         'coordinates': [parseFloat(longitude), parseFloat(latitude)]
@@ -19,11 +19,11 @@ exports.outletFormmater = (sellerId, bodyData, cuisines) => {
         6: bodyData.openingHours,
     }
     const outletId = randomBytes(6).toString('hex');
-    return { sellerId, outletImage,phone, outletId, outletName, type, isFood, cuisines, shopAddress, longitude, latitude, openingHours, location, preparationTime, area, isPureVeg, isDiscounted, discountId, tag }
+    return { sellerId, outletImage, phone, outletId, outletName, type, isFood, cuisines,outletBanner, shopAddress, longitude, latitude, openingHours, location, preparationTime, area, isPureVeg, isDiscounted, discountId, tag }
 }
 exports.updatedOutletFormatter = (outletData, cuisineList) => {
     const cuisines = cuisineList[0] ? cuisineList : undefined;
-    const { outletName, shopAddress, phone,outletImage, longitude, latitude, preparationTime, isPureVeg } = outletData;
+    let { outletName, shopAddress, phone, outletImage, outletBanner,longitude, latitude, preparationTime, isPureVeg, openingHours } = outletData;
     let location = undefined
     if (longitude && latitude) {
         location = {
@@ -31,11 +31,15 @@ exports.updatedOutletFormatter = (outletData, cuisineList) => {
             'coordinates': [longitude, latitude]
         }
     }
-    return { outletImage, outletName, phone,shopAddress, longitude, latitude, location, preparationTime, isPureVeg, cuisines }
+    if (openingHours && typeof openingHours == 'string') {
+
+        openingHours = JSON.parse(openingHours)
+    }
+    return { outletImage,outletBanner, outletName, phone, shopAddress, longitude, latitude, location, preparationTime, isPureVeg, cuisines, openingHours }
 }
 exports.customizationFormatter = (parentId, customizationData) => {
     try {
-        const { variationName, productId} = customizationData
+        const { variationName, productId } = customizationData
         if (!variationName) {
             return { status: false, message: "please provide valid data" }
         }
@@ -53,10 +57,10 @@ exports.customizationFormatter = (parentId, customizationData) => {
 }
 exports.customItemFormatter = (variationId, customItemData) => {
     try {
-        const { variantName, variantPrice,productId } = customItemData
+        const { variantName, variantPrice, productId } = customItemData
         const displayPrice = variantPrice
         const variantId = randomBytes(6).toString('hex');
-        const variantData = { variationId, variantId, variantName, variantPrice, displayPrice ,productId}
+        const variantData = { variationId, variantId, variantName, variantPrice, displayPrice, productId }
         return { status: true, message: "", data: variantData }
     } catch (error) {
         return { status: false, message: error.message }
@@ -64,7 +68,10 @@ exports.customItemFormatter = (variationId, customItemData) => {
 }
 exports.discountFormater = (customId, discountData) => {
     try {
-        const { discountTitle, promoCode, discountPercent, maxDiscount, minAmount, isCustom = true, isFlatDiscount = false } = discountData
+        let { discountTitle, promoCode, discountPercent, maxDiscount, minAmount, isCustom = true, isFlatDiscount = false } = discountData
+        if (!promoCode) {
+            promoCode = randomBytes(6).toString('hex');
+        }
         const discountId = randomBytes(6).toString('hex');
         return this.responseFormater(true, "", { discountId, customId, discountTitle, promoCode, discountPercent, maxDiscount, minAmount, isFlatDiscount, isCustom })
     } catch (error) {

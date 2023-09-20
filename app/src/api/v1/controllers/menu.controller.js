@@ -1,8 +1,8 @@
 const { addAddonCategory, addAddonProduct, getAllAddOnOfOutlet, getAddonCategoryByCategoryId, getAddOnTotal, getAllAddOnProductOfCategory, editAddonCategory, editAddonProduct } = require("../helpers/addOne.helper");
-const { addCategory, getAllCategoryOfOutlet, getAllSubCategory, getOnlyCategoryOfOutlet, getSubCategoryOfOutlet, getProductOfCategory, editCategoryById } = require("../helpers/category.helper");
+const { addCategory, getAllCategoryOfOutlet, getAllSubCategory, getOnlyCategoryOfOutlet, getSubCategoryOfOutlet, getProductOfCategory, editCategoryById, categoryByCategoryName, getAllCategoryOfOutletWithoutPagination, getFullItemOfCategory } = require("../helpers/category.helper");
 const { menuFormater } = require("../helpers/menu.helper");
 const { cartInit, outletByOutletId } = require("../helpers/outlet.helper");
-const { addProduct, allProductOfCategory, productById, customizationByProductId, customItemBycostomItemId, filterCustomItem, addCustomizationByProductId, editCustomizationByProductId, addCustomItemBycustomizationId, editCustomItemByCustomItemId, changeStockStatus, getOutOfStockProduct, customItemByCustomId, customizationByCustomizationId, productByLastVariation, addRemoveAddOnToProduct, editProductByProductId } = require("../helpers/product.helper");
+const { addProduct, allProductOfCategory, productById, customizationByProductId, customItemBycostomItemId, filterCustomItem, addCustomizationByProductId, editCustomizationByProductId, addCustomItemBycustomizationId, editCustomItemByCustomItemId, changeStockStatus, getOutOfStockProduct, customItemByCustomId, customizationByCustomizationId, productByLastVariation, addRemoveAddOnToProduct, editProductByProductId, checkProductByName } = require("../helpers/product.helper");
 const { success, badRequest, unknownError } = require("../helpers/response.helper");
 const { parseJwt } = require("../middleware/authToken");
 const { imageUpload } = require("../services/image.service");
@@ -29,7 +29,21 @@ exports.getMenu = async (req, res) => {
         return categoryData ? success(res, "success", data) : badRequest(res, "menu not found");
     } catch (error) {
         console.log(error.message);
-        unknownError(res, "unknown error")
+        unknownError(res, error.message)
+    }
+}
+
+exports.getFullMenu = async (req, res) => {
+    try {
+        const { outletId } = req.params
+        // console.log("token ===>", req.headers.authorization);
+        // const token = parseJwt(req.headers.authorization)
+        let categoryData = await getAllCategoryOfOutletWithoutPagination(outletId)
+        let menu = await menuFormater(categoryData)
+        return categoryData ? success(res, "success", menu) : badRequest(res, "menu not found");
+    } catch (error) {
+        console.log(error.message);
+        unknownError(res, error.message)
     }
 }
 
@@ -53,17 +67,34 @@ exports.getSubCategory = async (req, res) => {
         return unknownError(res, error)
     }
 }
+exports.getAllItemOfCategory = async (req, res) => {
+    try {
+        const { parentCategoryId } = req.params
+        let categoryData = await getFullItemOfCategory(parentCategoryId)
+        return categoryData ? success(res, "success", categoryData) : badRequest(res, "no sub-category found");
+    } catch (error) {
+        return unknownError(res, error)
+    }
+}
 exports.addNewCategory = async (req, res) => {
     try {
+        const categoryCheck = await categoryByCategoryName(req.body)
+        if (categoryCheck) {
+            return badRequest(res, "category already exist")
+        }
         const saveCategory = await addCategory(req.body);
         return saveCategory ? success(res, "category added", saveCategory) : badRequest(res, "please provide proper fields");
     } catch (error) {
-        unknownError(res, "unknown error")
+        unknownError(res, error.message)
     }
 }
 exports.editCategory = async (req, res) => {
     try {
         const { categoryId, categoryName } = req.body
+        const categoryCheck = await categoryByCategoryName(req.body)
+        if (categoryCheck) {
+            return badRequest(res, "category already exist")
+        }
         const { status, message } = await editCategoryById(categoryId, categoryName);
         return status ? success(res, message) : badRequest(res, message);
     } catch (error) {
@@ -78,20 +109,24 @@ exports.addNewProduct = async (req, res) => {
         if (req.file) {
             req.body.productImage = await imageUpload(req.file)
         }
+        const productCheck = await checkProductByName(req.body)
+        if (productCheck) {
+            return badRequest(res, "product already exist")
+        }
         const { status, message, data } = await addProduct(req.body);
         return status ? success(res, message, data) : badRequest(res, message);
     } catch (error) {
-        unknownError(res, "unknown error")
+        unknownError(res, error.message)
     }
 }
 
 exports.getProduct = async (req, res) => {
     try {
         const { productId } = req.params
-        const productData = await productById(productId);
-        return productData ? res.send({ status: true, subcode: 200, items: productData }) : res.send({ status: false, subcode: 400 })
+        const { status, message, data } = await productById(productId);
+        return status ? success(res, message, data) : badRequest(res, message);
     } catch (error) {
-        res.send({ status: false, subcode: 400 })
+        unknownError(res, error.message)
     }
 }
 
@@ -101,10 +136,14 @@ exports.editProduct = async (req, res) => {
         if (req.file) {
             req.body.productImage = await imageUpload(req.file)
         }
+        const productCheck = await checkProductByName(req.body, productId)
+        if (productCheck) {
+            return badRequest(res, "product already exist")
+        }
         const { status, message } = await editProductByProductId(productId, req.body);
         return status ? success(res, message) : badRequest(res, message);
     } catch (error) {
-        unknownError(res, "unknown error")
+        unknownError(res, error.message)
     }
 }
 
@@ -132,10 +171,11 @@ exports.getProductByCategory = async (req, res) => {
     try {
         const { parentCategoryId } = req.params
         const token = parseJwt(req.headers.authorization)
-        const productData = await allProductOfCategory(parentCategoryId, token.role);
-        return productData ? res.send({ status: true, subcode: 200, items: productData }) : res.send({ status: false, subcode: 400 })
+        const productData = await allProductOfCategory(parentCategoryId);
+
+        return productData ? success(res, "product list", productData) : badRequest(res, "no product found")
     } catch (error) {
-        res.send({ status: false, subcode: 400 })
+        return unknownError(res, error.message)
     }
 }
 
@@ -167,7 +207,7 @@ exports.getCustomization = async (req, res) => {
         const productData = await customizationByProductId(productId);
         return productData ? success(res, "customization list", productData) : badRequest(res, "no customization")
     } catch (error) {
-        unknownError(res, "unknown error")
+        unknownError(res, error.message)
     }
 }
 
@@ -175,6 +215,9 @@ exports.getCustomizationReverse = async (req, res) => {
     try {
         const { productId, addOnList } = req.body
         const productData = await productByLastVariation(productId);
+        if (!productData) {
+            return badRequest(res, "no product found")
+        }
         const outletData = await outletByOutletId(productData.outletId)
         productData._doc.outletName = outletData.data.outletName
         productData._doc.outletLongitude = outletData.data.longitude
@@ -192,7 +235,8 @@ exports.getCustomizationReverse = async (req, res) => {
         }
         return productData ? success(res, "customization list", productData) : badRequest(res, "no customization")
     } catch (error) {
-        unknownError(res, "unknown error")
+        console.log(error);
+        unknownError(res, error.message)
     }
 }
 
@@ -202,7 +246,7 @@ exports.getCustomizationDetail = async (req, res) => {
         const productData = await customizationByCustomizationId(customizationId);
         return productData ? success(res, "customization detail", productData) : badRequest(res, "no customization")
     } catch (error) {
-        unknownError(res, "unknown error")
+        unknownError(res, error.message)
     }
 }
 
@@ -212,7 +256,7 @@ exports.editCustomization = async (req, res) => {
         const { status, message } = await editCustomizationByProductId(variationId, req.body);
         return status ? success(res, message) : badRequest(res, message)
     } catch (error) {
-        unknownError(res, "unknown error")
+        unknownError(res, error.message)
     }
 }
 
@@ -224,7 +268,7 @@ exports.addCustomItem = async (req, res) => {
         const { status, message, data } = await addCustomItemBycustomizationId(variationId, req.body)
         return status ? success(res, message, data) : badRequest(res, message)
     } catch (error) {
-        unknownError(res, "unknown error")
+        unknownError(res, error.message)
     }
 }
 
@@ -235,7 +279,7 @@ exports.editCustomItem = async (req, res) => {
         return status ? success(res, message) : badRequest(res, message)
     } catch (error) {
 
-        unknownError(res, "unknown error")
+        unknownError(res, error.message)
     }
 }
 
@@ -246,7 +290,7 @@ exports.getCustomItemByItemId = async (req, res) => {
         return status ? success(res, message, data) : badRequest(res, message)
     } catch (error) {
 
-        unknownError(res, "unknown error")
+        unknownError(res, error.message)
     }
 }
 
@@ -254,18 +298,20 @@ exports.getCustomItem = async (req, res) => {
     try {
         const { productId } = req.params
         const { customItemIdList } = req.body
-        let productData = await productById(productId);
+        let { status, message, data: productData } = await productById(productId);
+        console.log(productData);
         if (!customItemIdList || customItemIdList[0].replaceAll(" ", "") == "" || !customItemIdList[0]) {
             productData._doc.customization = []
             productData._doc.hasCustomization = false
         }
+        console.log(productData);
         let { filteredList, productAmount } = filterCustomItem(productData.customization, customItemIdList, productData.displayPrice)
         productData._doc.customization = filteredList
         productData._doc.productAmount = productAmount
-        return productData ? res.send({ status: true, subcode: 200, items: { productList: productData } }) : res.send({ status: false, subcode: 400 })
+        return status ? success(res, message, { productList: productData }) : badRequest(res, message)
     } catch (error) {
         console.log(error);
-        unknownError(res, "unknown error")
+        unknownError(res, error.message)
     }
 }
 
@@ -328,11 +374,11 @@ exports.getOutletAddon = async (req, res) => {
 exports.getProductAddon = async (req, res) => {
     try {
         const { productId } = req.params
-        const productData = await productById(productId)
-        if (!productData) {
-            return badRequest(res, "product not found")
+        const { status, message, data } = await productById(productId)
+        if (!status) {
+            return badRequest(res, message)
         }
-        let categoryList = await Promise.all(productData.addOnList.map(async (addOnId) => {
+        let categoryList = await Promise.all(data.addOnList.map(async (addOnId) => {
             let addOnDetail = await getAddonCategoryByCategoryId(addOnId)
             if (addOnDetail.status) {
                 return addOnDetail.data

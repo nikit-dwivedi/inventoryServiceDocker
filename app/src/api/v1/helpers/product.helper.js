@@ -12,13 +12,16 @@ const { getAddOnTotal } = require('./addOne.helper');
 
 exports.addProduct = async (bodyData) => {
     try {
-        const { parentCategoryId, productName, productDesc, productImage, productPrice, isVeg = true, hasCustomization = false } = bodyData
+        const { parentCategoryId, productName, productPrice, isVeg = true, hasCustomization = false } = bodyData
+        let { productImage, productDesc } = bodyData
         const productId = randomBytes(6).toString('hex')
         const outletId = await getCategoryById(parentCategoryId)
         if (!outletId) {
             return { status: false, message: "outlet not found" }
         }
         let displayPrice = productPrice
+        productImage = productImage ? productImage : ""
+        productDesc = productDesc ? productDesc : ""
         const formattedData = {
             productId,
             outletId,
@@ -38,6 +41,22 @@ exports.addProduct = async (bodyData) => {
     } catch (error) {
         console.log(error);
         return { status: false, message: error.message }
+    }
+}
+
+exports.checkProductByName = async (bodyData, productId) => {
+    try {
+        let { productName, parentCategoryId } = bodyData
+        if (productId) {
+            let productData = await productModel.findOne({ productId }).lean()
+            parentCategoryId = productData.parentCategoryId
+
+        }
+        let productCheck = await productModel.findOne({ productName, parentCategoryId })
+
+        return productCheck && productCheck.productId != productId ? true : false
+    } catch (error) {
+        return false
     }
 }
 
@@ -72,7 +91,7 @@ exports.editProductByProductId = async (productId, bodyData) => {
 }
 
 
-exports.allProductOfCategory = async (parentCategoryId, role) => {
+exports.allProductOfCategory = async (parentCategoryId) => {
     try {
         // const options = {
         //     page: 1,
@@ -90,9 +109,9 @@ exports.allProductOfCategory = async (parentCategoryId, role) => {
 exports.productById = async (productId) => {
     try {
         const productData = await productModel.findOne({ productId }).select('-_id -__v -customization._id -customization.customItem._id -customization.createdAt -customization.updatedAt -createdAt -updatedAt -isActive')
-        return productData
+        return productData ? responseFormater(true, "Product details", productData) : responseFormater(false, "product not found")
     } catch (error) {
-        return false
+        return responseFormater(false, error.message)
     }
 }
 
@@ -389,13 +408,15 @@ exports.filterCustomItem = (customizationList, customItemIdList, displayPrice) =
     try {
         let filteredList = []
         productAmount = displayPrice
+        const customItemIdSet = new Set(customItemIdList);
         for (const customization of customizationList) {
-            let customItemList = customization.customItem
-            for (const customItem of customItemList) {
-                if (customItemIdList.includes(customItem.customItemId)) {
+            for (const customItem of customization.customItem) {
+                if (customItemIdSet.has(customItem.customItemId)) {
                     productAmount += customItem.customItemPrice;
-                    delete customItem._doc._id
-                    filteredList.push(customItem)
+                    filteredList.push({
+                        ...customItem,
+                        _doc: { ...customItem._doc, _id: undefined }
+                    });
                 }
             }
         }

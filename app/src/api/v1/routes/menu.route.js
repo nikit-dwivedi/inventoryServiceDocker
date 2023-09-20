@@ -7,11 +7,13 @@ const uploads = require('../helpers/multer.helper.js');
 
 
 router.get('/:outletId', menuController.getMenu);
+router.get('/full/:outletId', menuController.getFullMenu);
 
 //--------------------------------------category---------------------------------------------//
 router.post('/category', menuController.addNewCategory);
 router.get('/category/:outletId', menuController.getCategory)
 router.get('/sub-category/:parentCategoryId', menuController.getSubCategory)
+router.get('/category/full/:parentCategoryId', menuController.getAllItemOfCategory)
 router.post('/category/edit',menuController.editCategory)
 
 //---------------------------------------product--------------------------------------------//

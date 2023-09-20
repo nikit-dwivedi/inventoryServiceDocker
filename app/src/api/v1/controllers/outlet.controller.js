@@ -2,10 +2,11 @@ const { getAllBanner } = require("../helpers/banner.helper");
 const { getCuisineList, getCuisineForOutlet, addCuisine } = require("../helpers/cusion.helpers");
 const { discountByDiscountId } = require("../helpers/discount.helper");
 const { changeRatingInOrder } = require("../helpers/microservice.helper");
-const { addOutlet, outletsBySellerId, outletByOutletId, markOutletClosedOrOpen, allOutlet, nearByOutlet, getFeaturedOutlet, homeScreenFormanter, addDiscountToOutlet, removeDiscountToOutlet, outletByCuisineId, editOutletDetails, outletCheck, changeAllOutletStatus, outletStat, markOutletVerify } = require("../helpers/outlet.helper");
+const { addOutlet, outletsBySellerId, outletByOutletId, markOutletClosedOrOpen, allOutlet, nearByOutlet, getFeaturedOutlet, homeScreenFormanter, addDiscountToOutlet, removeDiscountToOutlet, outletByCuisineId, editOutletDetails, outletCheck, changeAllOutletStatus, outletStat, markOutletVerify, allOutletPaginated, openCloseOutlets, linkBank, transactionOfOutlets, outletIdBySellerId } = require("../helpers/outlet.helper");
 const { addRating } = require("../helpers/rating.helper");
 const { success, badRequest, unknownError } = require("../helpers/response.helper");
 const { parseJwt } = require("../middleware/authToken");
+const { searchOutlet, addOutletData } = require("../services/algoila.service");
 const { post } = require("../services/axios.service");
 const { imageUpload } = require("../services/image.service");
 
@@ -13,8 +14,14 @@ exports.addNewOutlet = async (req, res) => {
     try {
         const token = parseJwt(req.headers.authorization)
         let sellerId = token.customId
-        if (req.file) {
-            req.body.outletImage = await imageUpload(req.file)
+        console.log(req.files);
+        if (req.files) {
+            if (req.files.outletImage) {
+                req.body.outletImage = await imageUpload(req.files.outletImage[0])
+            }
+            if (req.files.outletBanner) {
+                req.body.outletBanner = await imageUpload(req.files.outletBanner[0])
+            }
         }
         if (token.role == 3) {
             sellerId = req.body.sellerId
@@ -44,7 +51,8 @@ exports.getOutlet = async (req, res) => {
     try {
         const { outletId } = req.params
         const { status, message, data } = await outletByOutletId(outletId);
-        return status ? success(res, message, data) : badRequest(res, message)
+        // const data = await openCloseOutlets()
+        return true ? success(res, "message", data) : badRequest(res, "message")
     } catch (error) {
         unknownError(res, error);
     }
@@ -52,8 +60,14 @@ exports.getOutlet = async (req, res) => {
 exports.updateOutlet = async (req, res) => {
     try {
         const { outletId } = req.params
-        if (req.file) {
-            req.body.outletImage = await imageUpload(req.file)
+        console.log(req.files);
+        if (req.files) {
+            if (req.files.outletImage) {
+                req.body.outletImage = await imageUpload(req.files.outletImage[0])
+            }
+            if (req.files.outletBanner) {
+                req.body.outletBanner = await imageUpload(req.files.outletBanner[0])
+            }
         }
         if (typeof req.body.cuisines === "string") {
             req.body.cuisines = JSON.parse(req.body.cuisines)
@@ -98,6 +112,16 @@ exports.closeAllOutlet = async (req, res) => {
 exports.getAllOutlet = async (req, res) => {
     try {
         const { status, message, data } = await allOutlet()
+        return status ? success(res, message, data) : badRequest(res, message)
+    } catch (error) {
+
+        unknownError(res, error);
+    }
+}
+exports.getAllPaginatedOutlet = async (req, res) => {
+    try {
+        const { page, limit } = req.query
+        const { status, message, data } = await allOutletPaginated(page, limit)
         return status ? success(res, message, data) : badRequest(res, message)
     } catch (error) {
 
@@ -212,6 +236,34 @@ exports.homeScreen = async (req, res) => {
         return unknownError(res, error)
     }
 }
+
+exports.sellerTransaction = async (req, res) => {
+    try {
+        const token = parseJwt(req.headers.authorization)
+        const outletList = await outletIdBySellerId(token.customId)
+        const { from, to } = req.query
+        if (!outletList.status) {
+            return badRequest(res, outletList.message)
+        }
+        const { status, message, data } = await transactionOfOutlets(outletList.data.idList, req.headers.authorization, from, to, outletList.data.idWithDetail)
+        return status ? success(res, message, data) : badRequest(res, message);
+    } catch (error) {
+        console.log(error);
+        return unknownError(res, error)
+    }
+}
+
+exports.addBankToOutlet = async (req, res) => {
+    try {
+        const { outletId, bankId } = req.body
+        const token = req.headers.authorization
+        const { status, message, data } = await linkBank(outletId, bankId, token)
+        return status ? success(res, message) : badRequest(res, message)
+    } catch (error) {
+        return unknownError(res, error.message)
+    }
+}
+
 exports.addYeloShop = async (req, res) => {
     try {
         const sellerId = 'chmod777'
@@ -256,6 +308,36 @@ exports.getStat = async (req, res) => {
         return status ? success(res, message, data) : badRequest(res, message)
     } catch (error) {
         unknownError(res, error);
+    }
+}
+
+
+exports.addToSearch = async (req, res) => {
+    try {
+        const { status, message, data } = await allOutlet()
+        const formattedData = data.map((outlet) => {
+            return {
+                objectID:outlet.outletId,
+                outletName: outlet.outletName,
+                outletImage: outlet.outletImage,
+                shopAddress: outlet.shopAddress
+            }
+        })
+        const pushData = await addOutletData(formattedData)
+        return status ? success(res, message, pushData) : badRequest(res, message)
+    } catch (error) {
+       
+        return unknownError(res, error.message)
+    }
+}
+
+exports.getSearchData = async (req, res) => {
+    try {
+        const searchResult = await searchOutlet(req.query)
+        return searchResult ? success(res, "search result", searchResult) : badRequest(res, "nothing found")
+    } catch (error) {
+        console.log(error);
+        return unknownError(res, error.message)
     }
 }
 

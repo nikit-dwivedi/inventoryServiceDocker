@@ -1,25 +1,51 @@
-version : '3'
+version: '3'
 
 services:
-    lb:
-        image: haproxy
-        ports:
-            - "8084:8080"
-        volumes:
-            - ./haproxy:/usr/local/etc/haproxy
-    inventoryservice1:
-        image: inventoryservice
-        environment:
-            - APPID=1111
-    inventoryservice2:
-        image: inventoryservice
-        environment:
-            - APPID=2222
-    inventoryservice3:
-        image: inventoryservice
-        environment:
-            - APPID=3333
-    inventoryservice4:
-        image: inventoryservice
-        environment:
-            - APPID=4444
+  lb:
+    image: haproxy
+    ports:
+      - "8084:8080"
+    networks:
+      marketplace:
+        ipv4_address: 172.22.0.2 # Assign a static IP address to the lb service
+    volumes:
+      - ./haproxy:/usr/local/etc/haproxy
+
+  inventoryservice1:
+    image: inventoryservice
+    environment:
+      - APPID=1111
+    networks:
+      marketplace:
+        ipv4_address: 172.22.0.3 # Assign a static IP address to inventoryservice1
+
+  inventoryservice2:
+    image: inventoryservice
+    environment:
+      - APPID=2222
+    networks:
+      marketplace:
+        ipv4_address: 172.22.0.4 # Assign a static IP address to inventoryservice2
+
+  inventoryservice3:
+    image: inventoryservice
+    environment:
+      - APPID=3333
+    networks:
+      marketplace:
+        ipv4_address: 172.22.0.5 # Assign a static IP address to inventoryservice3
+
+  inventoryservice4:
+    image: inventoryservice
+    environment:
+      - APPID=4444
+    networks:
+      marketplace:
+        ipv4_address: 172.22.0.6 # Assign a static IP address to inventoryservice4
+
+networks:
+  marketplace:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.22.0.0/16 # Define a subnet for your custom network named "marketplace"

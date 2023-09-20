@@ -19,10 +19,12 @@ const categorySchema = new Schema({
         type: String
     },
     categoryDesc: {
-        type: String
+        type: String,
+        default: ""
     },
     categoryImage: {
-        type: String
+        type: String,
+        default: ""
     },
     hasSubCategory: {
         type: Boolean,

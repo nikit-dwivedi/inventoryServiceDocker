@@ -1,7 +1,7 @@
 const { getAllSubCategory } = require("./category.helper")
 const { allProductOfCategory, productById } = require("./product.helper")
 
-exports.menuFormater = async (categoryArray, productId,role) => {
+exports.menuFormater = async (categoryArray, productId, role) => {
     for (let element of categoryArray) {
         if (element.hasSubCategory) {
             let subCategoryList = await getAllSubCategory(element.categoryId)
@@ -10,7 +10,7 @@ exports.menuFormater = async (categoryArray, productId,role) => {
             element._doc.subCategoryList = subCategoryList
             await this.menuFormater(subCategoryList)
         } else {
-            let productList = await allProductOfCategory(element.categoryId,role);
+            let productList = await allProductOfCategory(element.categoryId, role);
             let productLength = productList.length
             element._doc.itemCount = productLength
             element._doc.productList = productList
@@ -18,15 +18,15 @@ exports.menuFormater = async (categoryArray, productId,role) => {
     }
     if (productId) {
         let productList = await productById(productId);
-        delete productList.outletId
-        delete productList.parentCategoryId
+        delete productList.data.outletId
+        delete productList.data.parentCategoryId
         const data = {
             categoryId: "f57e25d45028",
             categoryName: "Gotcha!!!",
             hasSubCategory: false,
             isCustom: true,
             itemCount: 1,
-            productList:[productList]
+            productList: [productList.data]
         }
         categoryArray.unshift(data)
     }

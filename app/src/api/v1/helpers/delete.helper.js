@@ -12,21 +12,21 @@ const discountModel = require("../models/discount.model");
 
 exports.deleteById = async (bodyData) => {
     try {
-        const { sellerId, outletId, categoryId, productId, variationId, variantId, addOnCategoryId, addOnProductId, ...garbage } = bodyData
-        console.log(sellerId);
+        const { sellerId, outletId, categoryId, productId, variationId, variantId, addOnCategoryId, addOnProductId, discountId, ...garbage } = bodyData
         // validation creation
-        const sellerIdCondition = (sellerId && (outletId != undefined || categoryId != undefined || productId != undefined || variationId != undefined || variantId != undefined || addOnCategoryId != undefined || addOnProductId != undefined)) ? true : false
-        const outletCondition = (outletId && (sellerId != undefined || categoryId != undefined || productId != undefined || variationId != undefined || variantId != undefined || addOnCategoryId != undefined || addOnProductId != undefined)) ? true : false
-        const categoryCondition = (categoryId && (outletId != undefined || sellerId != undefined || productId != undefined || variationId != undefined || variantId != undefined || addOnCategoryId != undefined || addOnProductId != undefined)) ? true : false
-        const productCondition = (productId && (outletId != undefined || categoryId != undefined || sellerId != undefined || variationId != undefined || variantId != undefined || addOnCategoryId != undefined || addOnProductId != undefined)) ? true : false
-        const variationCondition = (variationId && (outletId != undefined || categoryId != undefined || productId != undefined || sellerId != undefined || variantId != undefined || addOnCategoryId != undefined || addOnProductId != undefined)) ? true : false
-        const variantCondition = (variantId && (outletId != undefined || categoryId != undefined || productId != undefined || variationId != undefined || sellerId != undefined || addOnCategoryId != undefined || addOnProductId != undefined)) ? true : false
-        const addOnCategoryCondition = (addOnCategoryId && (outletId != undefined || categoryId != undefined || productId != undefined || variationId != undefined || sellerId != undefined || variantId != undefined || addOnProductId != undefined)) ? true : false
-        const addOnProductCondition = (addOnProductId && (outletId != undefined || categoryId != undefined || productId != undefined || variationId != undefined || sellerId != undefined || addOnCategoryId != undefined || variantId != undefined)) ? true : false
+        const sellerIdCondition = (sellerId && (outletId != undefined || categoryId != undefined || productId != undefined || variationId != undefined || variantId != undefined || addOnCategoryId != undefined || addOnProductId != undefined || discountId != undefined)) ? true : false
+        const outletCondition = (outletId && (sellerId != undefined || categoryId != undefined || productId != undefined || variationId != undefined || variantId != undefined || addOnCategoryId != undefined || addOnProductId != undefined || discountId != undefined)) ? true : false
+        const categoryCondition = (categoryId && (outletId != undefined || sellerId != undefined || productId != undefined || variationId != undefined || variantId != undefined || addOnCategoryId != undefined || addOnProductId != undefined || discountId != undefined)) ? true : false
+        const productCondition = (productId && (outletId != undefined || categoryId != undefined || sellerId != undefined || variationId != undefined || variantId != undefined || addOnCategoryId != undefined || addOnProductId != undefined || discountId != undefined)) ? true : false
+        const variationCondition = (variationId && (outletId != undefined || categoryId != undefined || productId != undefined || sellerId != undefined || variantId != undefined || addOnCategoryId != undefined || addOnProductId != undefined || discountId != undefined)) ? true : false
+        const variantCondition = (variantId && (outletId != undefined || categoryId != undefined || productId != undefined || variationId != undefined || sellerId != undefined || addOnCategoryId != undefined || addOnProductId != undefined || discountId != undefined)) ? true : false
+        const addOnCategoryCondition = (addOnCategoryId && (outletId != undefined || categoryId != undefined || productId != undefined || variationId != undefined || sellerId != undefined || variantId != undefined || addOnProductId != undefined || discountId != undefined)) ? true : false
+        const addOnProductCondition = (addOnProductId && (outletId != undefined || categoryId != undefined || productId != undefined || variationId != undefined || sellerId != undefined || addOnCategoryId != undefined || variantId != undefined || discountId != undefined)) ? true : false
+        const discountCondition = (discountId && (outletId != undefined || categoryId != undefined || productId != undefined || variationId != undefined || sellerId != undefined || addOnCategoryId != undefined || variantId != undefined || addOnProductId != undefined)) ? true : false
         const garbageCondition = Object.entries(garbage)[0] ? true : false
 
         // validate Body
-        if (sellerIdCondition || outletCondition || categoryCondition || productCondition || variationCondition || variantCondition || addOnCategoryCondition || addOnProductCondition || garbageCondition) {
+        if (sellerIdCondition || outletCondition || categoryCondition || productCondition || variationCondition || variantCondition || addOnCategoryCondition || addOnProductCondition || discountCondition || garbageCondition) {
             return responseFormater(false, "Please send only one type of Id ad a time")
         }
 
@@ -44,6 +44,7 @@ exports.deleteById = async (bodyData) => {
             return await this.deleteProduct(productId)
         }
         if (variationId) {
+            await this.removeCustomizationFromProduct(variationId)
             return await this.deleteVariation(variationId)
         }
         if (variantId) {
@@ -55,6 +56,10 @@ exports.deleteById = async (bodyData) => {
         if (addOnProductId) {
             return await this.deleteAddOnProduct(addOnProductId)
         }
+        if (discountId) {
+            return await this.deleteDiscount(discountId)
+        }
+        return responseFormater(true, "done", outletList)
 
 
     } catch (error) {
@@ -217,11 +222,19 @@ exports.deleteSeller = async (sellerId) => {
 
 exports.deleteOutlet = async (outletId) => {
     try {
-        let outletData = await categoryModel.aggregate([
+        let outletData = await outletModel.aggregate([
             {
                 $match: {
                     outletId
                 }
+            },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "outletId",
+                    foreignField: "outletId",
+                    as: "categories"
+                },
             },
             {
                 $lookup: {
@@ -244,7 +257,7 @@ exports.deleteOutlet = async (outletId) => {
                     _id: "$outletId",
                     sellerId: { $first: null },
                     outletId: { $first: "$outletId" },
-                    categoryList: { $push: "$categoryId" },
+                    categoryData: { $push: "$categories.categoryId" },
                     productData: { $push: "$products.productId" },
                     addOnCategoryData: { $push: "$addOnCategory.addOnCategoryId" }
                 }
@@ -254,7 +267,7 @@ exports.deleteOutlet = async (outletId) => {
                     _id: null,
                     sellerId: { $first: "$sellerId" },
                     outletId: { $first: "$outletId" },
-                    categoryList: { $first: "$categoryList" },
+                    categoryData: { $addToSet: { $reduce: { input: "$categoryData", initialValue: [], in: { $setUnion: ["$$value", "$$this"] } } } },
                     productData: { $addToSet: { $reduce: { input: "$productData", initialValue: [], in: { $setUnion: ["$$value", "$$this"] } } } },
                     addOnCategoryData: { $addToSet: { $reduce: { input: "$addOnCategoryData", initialValue: [], in: { $setUnion: ["$$value", "$$this"] } } } },
                 }
@@ -262,6 +275,7 @@ exports.deleteOutlet = async (outletId) => {
             {
                 $set: {
                     outletList: ["$outletId"],
+                    categoryList: { $arrayElemAt: ["$categoryData", 0] },
                     productList: { $arrayElemAt: ["$productData", 0] },
                     discountList: [],
                     addOnCategoryList: { $arrayElemAt: ["$addOnCategoryData", 0] },
@@ -341,7 +355,6 @@ exports.deleteOutlet = async (outletId) => {
                 }
             }
         ])
-        console.log("================", outletData);
         return outletData[0] ? responseFormater(true, "data list", outletData[0]) : responseFormater(false, "Invalid Id provided")
     } catch (error) {
         console.log(error);
@@ -826,17 +839,25 @@ exports.deleteVariant = async (variantId) => {
 
 exports.deleteAddOnCategory = async (addOnCategoryId) => {
     try {
-        let outletData = await addOnProductModel.aggregate([
+        let outletData = await addOnCategoryModel.aggregate([
             {
                 $match: {
                     addOnCategoryId
                 }
             },
             {
+                $lookup: {
+                    from: "addonproducts",
+                    localField: "addOnCategoryId",
+                    foreignField: "addOnCategoryId",
+                    as: "addOnProducts"
+                }
+            },
+            {
                 $group: {
                     _id: addOnCategoryId,
                     addOnCategoryId: { $first: "$addOnCategoryId" },
-                    addOnProductData: { $push: "$addOnProductId" }
+                    addOnProductData: { $first: "$addOnProducts.addOnProductId" }
                 }
             },
             {
@@ -883,6 +904,15 @@ exports.deleteAddOnProduct = async (addOnProductId) => {
     }
 }
 
+exports.deleteDiscount = async (discountId) => {
+    try {
+        await discountModel.findOneAndDelete({ discountId })
+        return responseFormater(true, "data list")
+    } catch (error) {
+        return responseFormater(false, error.message)
+    }
+}
+
 exports.bulkTaskFormatter = async (dataSet) => {
     try {
         const { sellerId, outletList, categoryList, productList, addOnCategoryList, discountList, addOnProductList, variationList, variantList } = dataSet
@@ -913,5 +943,24 @@ exports.bulkTaskFormatter = async (dataSet) => {
         console.log(dataSet);
     } catch (error) {
         console.log("========", error.message);
+        return responseFormater(res, error.message)
+    }
+}
+
+exports.removeCustomizationFromProduct = async (variationId) => {
+    try {
+        const variationDetail = await variationModel.findOne({ variationId })
+        const productCheck = await productModel.findOne({ productId: variationDetail.parentId })
+        if (productCheck) {
+            await productModel.findOneAndUpdate({ productId: variationDetail.parentId }, { hasCustomization: false })
+            return
+        }
+        const variantCheck = await variantModel.findOne({variantId: variationDetail.parentId })
+        if (variantCheck) {
+            await variantModel.findOneAndUpdate({ variantId: variationDetail.parentId }, { hasCustomization: false })
+            return
+        }
+    } catch (error) {
+        console.log(error.message)
     }
 }

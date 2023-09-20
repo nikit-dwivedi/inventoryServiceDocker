@@ -3,6 +3,7 @@ const { outletFormmater, responseFormater, updatedOutletFormatter } = require('.
 const { get } = require('../services/axios.service');
 const { orderCountUrl } = require('../services/url.service');
 const { discountByDiscountId } = require('./discount.helper');
+const { checkBankByBankId, getAllTransactionOfOutlet } = require('../services/payment.service');
 
 exports.addOutlet = async (sellerId, bodyData, cuisineList) => {
     try {
@@ -30,6 +31,41 @@ exports.markOutletVerify = async (outletId, status) => {
         return responseFormater(false, error.message)
     }
 }
+
+exports.linkBank = async (outletId, bankId, token) => {
+    try {
+        const outletCheck = await outletModel.exists({ outletId })
+        if (!outletCheck) {
+            return responseFormater(false, "outlet not found")
+        }
+        const bankCheck = await checkBankByBankId(bankId, token)
+        if (!bankCheck.status) {
+            return responseFormater(false, bankCheck.message)
+        }
+        await outletModel.findOneAndUpdate({ outletId }, { bankId })
+        return responseFormater(true, "Bank Linked")
+    } catch (error) {
+        return responseFormater(false, error.message, error)
+
+    }
+}
+exports.transactionOfOutlets = async (outletList, token, from, to, outletMap) => {
+    try {
+        const { status, message, data } = await getAllTransactionOfOutlet(outletList, from, to, token)
+        if (!status) {
+            return responseFormater(false, message)
+        }
+        const formattedData = data.map((data) => {
+            const additionData = outletMap.get(data.outletId)
+            data = { outletName: additionData.outletName, area: additionData.area, ...data }
+            return data
+        })
+        return responseFormater(true, message, formattedData)
+    } catch (error) {
+        return responseFormater(false, error.message, error)
+    }
+}
+
 exports.outletByCuisineId = async (cuisineId) => {
     try {
         const outletData = await outletModel.find({ 'cuisines.cuisineId': cuisineId, isActive: true, isVisible: true, isVerified: true, isClosed: false }).select('-_id -openingHours._id -isActive -__v');
@@ -52,51 +88,135 @@ exports.outletsBySellerId = async (sellerId, mode) => {
             return responseFormater(false, "invalid mode", {})
         }
         let query = (mode != undefined) ? { sellerId, isActive: true, isClosed: mode } : { sellerId, isActive: true }
-        const outletList = await outletModel.find(query).select('-_id outletId outletName area phone outletImage isClosed shopAddress longitude latitude isDiscounted discountId').lean();
-        if (outletList[0]) {
-            for (const element of outletList) {
-                let discountData = {
-                    discountId: "",
-                    customId: "",
-                    discountTitle: "",
-                    promoCode: "",
-                    discountPercent: 0,
-                    maxDiscount: 0,
-                    minAmount: 0,
-                    isFlatDiscount: false,
-                    isCustom: false
+        // const outletList = await outletModel.find(query).select('-_id outletId outletName area phone outletImage outletBanner isClosed shopAddress isVerified longitude latitude isDiscounted discountId').lean();
+        const outletList = await outletModel.aggregate([
+            {
+                $match: query
+            },
+            {
+                $lookup: {
+                    from: "discounts",
+                    localField: "discountId",
+                    foreignField: "discountId",
+                    pipeline: [{
+                        $project: {
+                            _id: 0,
+                            discountId: 1,
+                            customId: 1,
+                            discountTitle: 1,
+                            promoCode: 1,
+                            discountPercent: 1,
+                            maxDiscount: 1,
+                            minAmount: 1,
+                            isFlatDiscount: 1,
+                            isCustom: 1,
+                        }
+                    }],
+                    as: "discountObj"
                 }
-                if (element.isDiscounted) {
-                    const { status, data } = await discountByDiscountId(element.discountId)
-                    if (status) {
-                        discountData = data
-                    } else {
-                        isDiscounted = false
-                    }
+            },
+            {
+                $lookup: {
+                    from: "discounts",
+                    localField: "discountId",
+                    foreignField: "discountId",
+                    pipeline: [{
+                        $project: {
+                            _id: 0,
+                            discountId: 1,
+                            customId: 1,
+                            discountTitle: 1,
+                            promoCode: 1,
+                            discountPercent: 1,
+                            maxDiscount: 1,
+                            minAmount: 1,
+                            isFlatDiscount: 1,
+                            isCustom: 1,
+                        }
+                    }],
+                    as: "discountObj"
                 }
-                element.discountData = discountData
-                element.initCount = 0
-                element.pendingCount = 0
-                element.preperingCount = 0
-                element.readyCount = 0
-                element.dispatchedCount = 0
-                element.deliveredCount = 0
-                element.cancelledCount = 0
-                count = await this.getOrderCount(element.outletId)
-                if (count) {
-                    element.initCount = count.initCount
-                    element.pendingCount = count.pendingCount
-                    element.preperingCount = count.preperingCount
-                    element.readyCount = count.readyCount
-                    element.dispatchedCount = count.dispatchedCount
-                    element.deliveredCount = count.deliveredCount
-                    element.cancelledCount = count.cancelledCount
+            },
+            {
+                $set: {
+                    discountData: {
+                        $cond: {
+                            if: { $ne: ["$discountId", ""] },
+                            then: { $first: "$discountObj" },
+                            else: {
+                                discountId: "",
+                                customId: "",
+                                discountTitle: "",
+                                promoCode: "",
+                                discountPercent: 0,
+                                maxDiscount: 0,
+                                minAmount: 0,
+                                isFlatDiscount: false,
+                                isCustom: false
+                            }
+                        }
+                    },
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    outletId: 1,
+                    outletName: 1,
+                    area: 1,
+                    phone: 1,
+                    outletImage: 1,
+                    outletBanner: 1,
+                    isClosed: 1,
+                    shopAddress: 1,
+                    isVerified: 1,
+                    longitude: 1,
+                    latitude: 1,
+                    isDiscounted: 1,
+                    discountId: 1,
+                    discountData: 1,
                 }
             }
+        ])
+        if (outletList[0]) {
+            const promises = outletList.map(async (element) => {
+                element.pendingCount = 0;
+                element.preparingCount = 0;
+                element.readyCount = 0;
+                element.dispatchedCount = 0;
+                element.deliveredCount = 0;
+                element.cancelledCount = 0;
+
+                const count = await this.getOrderCount(element.outletId);
+                if (count) {
+                    element.pendingCount = count.pendingCount;
+                    element.preparingCount = count.preperingCount;
+                    element.readyCount = count.readyCount;
+                    element.dispatchedCount = count.dispatchedCount;
+                    element.deliveredCount = count.deliveredCount;
+                    element.cancelledCount = count.cancelledCount;
+                }
+            });
+
+            await Promise.all(promises);
         }
         return outletList[0] ? responseFormater(true, "outlet list", outletList) : responseFormater(false, "outlet not found", [])
     } catch (error) {
-        return responseFormater(false, "bad requres", error)
+        console.log(error.message);
+        return responseFormater(false, "bad request", error)
+    }
+}
+exports.outletIdBySellerId = async (sellerId) => {
+    try {
+        const outletList = await outletModel.find({ sellerId, isActive: true, }).select('-_id outletId outletName area').lean();
+        const idList = outletList.map(outlet => outlet.outletId)
+        let idWithDetail
+        if (idList[0]) {
+            idWithDetail = new Map(outletList.map(outlet => [outlet.outletId, outlet]))
+        }
+        return idList[0] ? responseFormater(true, "outlet list", { idList, idWithDetail }) : responseFormater(false, "outlet not found", [])
+    } catch (error) {
+        return responseFormater(false, "bad request", error)
     }
 }
 exports.markOutletClosedOrOpen = async (sellerId, outletId, adminCheck) => {
@@ -181,8 +301,26 @@ exports.getFeaturedOutlet = async () => {
 }
 exports.allOutlet = async () => {
     try {
+
         const outletList = await outletModel.find({ isActive: true }).select('-_id -location  -openingHours._id -isActive -__v').lean()
         return outletList[0] ? responseFormater(true, "outlet list", outletList) : responseFormater(false, "outlet not found", [])
+    } catch (error) {
+        console.log(error);
+        return responseFormater(false, error.message)
+    }
+}
+exports.allOutletPaginated = async (page, limit) => {
+    try {
+        page = page ?? 1
+        limit = limit ?? 10
+        const options = {
+            page: page,
+            limit: limit,
+            sort: { createdAt: -1 },
+            select: '-_id -location  -openingHours._id -isActive -__v'
+        };
+        const outletList = await outletModel.paginate({ isActive: true }, options);
+        return outletList ? responseFormater(true, "outlet list", outletList) : responseFormater(false, "outlet not found", [])
     } catch (error) {
         console.log(error);
         return responseFormater(false, error.message)
@@ -201,6 +339,7 @@ exports.getOrderCount = async (outletId) => {
     try {
         let countUrl = orderCountUrl(outletId)
         let count = await get(countUrl)
+        console.log(outletId);
         return count ? count.items : false;
     } catch (error) {
         return false;
@@ -368,6 +507,7 @@ exports.editOutletDetails = async (outletId, updateData, cuisineList) => {
         await outletModel.findOneAndUpdate({ outletId }, formateUpdatedOutlet, { new: true })
         return responseFormater(true, "outlet updated")
     } catch (error) {
+        console.log(error);
         return responseFormater(false, error.message)
     }
 }
@@ -386,8 +526,8 @@ exports.outletSearch = async (searchText, long, lat) => {
                         "distanceField": "distance",
                         "spherical": true,
                         "distanceMultiplier": 0.001,
-                        // "maxDistance": 4500,
-                        "query": { isActive: true, isFeatured: false, isVisible: true, isVerified: true },
+                        "maxDistance": 4500,
+                        "query": { isActive: true, isClosed: false, isVisible: true, isVerified: true },
 
                     },
                 }, {
@@ -508,6 +648,56 @@ exports.outletCheck = async (outletId) => {
         return outletData ? responseFormater(true, "outlet Id", outletData) : responseFormater(false, "outlet not found")
     } catch (error) {
         return responseFormater(false, error.message)
+    }
+}
+
+exports.openCloseOutlets = async () => {
+    try {
+        // Assuming you have a collection called 'outlets'
+        // and the current day and time are available as JavaScript Date objects
+
+        const currentDay = new Date().getDay(); // Get the current day of the week (0-6, where 0 is Sunday)
+        const currentTime = "09:00:00"
+        // new Date().toLocaleTimeString('en-US', { hour12: false }); // Get the current time in 24-hour format
+        console.log(currentTime);
+        let data = outletModel.aggregate([
+            {
+                $project: {
+                    outletId: 1,
+                    outletName: 1,
+                    openingHours: {
+                        $arrayElemAt: [
+                            {
+                                $objectToArray: "$openingHours"
+                            },
+                            currentDay
+                        ]
+                    }
+                }
+            },
+            {
+                $unwind: "$openingHours"
+            },
+            {
+                $addFields: {
+                    openingTime: { $arrayElemAt: [{ $split: ["$openingHours.v", "-"] }, 0] },
+                    closingTime: { $arrayElemAt: [{ $split: ["$openingHours.v", "-"] }, 1] },
+                }
+            },
+            // {
+            //   $match: {
+            //     $expr: {
+            //       $and: [
+            //         { $lte: ["$openingTime", currentTime] },
+            //         { $gte: ["$closingTime", currentTime] }
+            //       ]
+            //     }
+            //   }
+            // }
+        ])
+        return data
+    } catch (error) {
+        throw new Error(error.message)
     }
 }
 
