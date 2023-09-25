@@ -96,6 +96,14 @@ exports.getOnlyCategoryOfOutlet = async (outletId) => {
             {
                 $lookup: {
                     from: 'products',
+                    localField: 'subCategory.categoryId',
+                    foreignField: 'parentCategoryId',
+                    as: 'subCategoryProducts'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'products',
                     localField: 'categoryId',
                     foreignField: 'parentCategoryId',
                     as: 'products'
@@ -107,28 +115,62 @@ exports.getOnlyCategoryOfOutlet = async (outletId) => {
                         $size: '$subCategory'
                     },
                     totalProductsCount: {
-                        $size: '$products'
+                        $add: [
+                            {
+                                $size: '$products'
+                            },
+                            {
+                                $size: '$subCategoryProducts'
+                            }
+                        ]
                     },
                     availableProductsCount: {
                         $size: {
-                            $filter: {
-                                input: '$products',
-                                as: 'data',
-                                cond: {
-                                    $eq: ['$$data.inStock', true]
-                                }
-                            }
+                            $concatArrays: [
+                                {
+                                    $filter: {
+                                        input: '$products',
+                                        as: 'data',
+                                        cond: {
+                                            $eq: ['$$data.inStock', true]
+                                        }
+                                    }
+                                },
+                                {
+                                    $filter: {
+                                        input: '$subCategoryProducts',
+                                        as: 'data',
+                                        cond: {
+                                            $eq: ['$$data.inStock', true]
+                                        }
+                                    }
+                                },
+                            ]
                         }
                     },
                     outOfStockProductsCount: {
                         $size: {
-                            $filter: {
-                                input: '$products',
-                                as: 'data',
-                                cond: {
-                                    $eq: ['$$data.inStock', false]
-                                }
-                            }
+                            $concatArrays: [
+                                {
+                                    $filter: {
+                                        input: '$products',
+                                        as: 'data',
+                                        cond: {
+                                            $eq: ['$$data.inStock', false]
+                                        }
+                                    }
+                                },
+                                {
+                                    $filter: {
+                                        input: '$subCategoryProducts',
+                                        as: 'data',
+                                        cond: {
+                                            $eq: ['$$data.inStock', false]
+                                        }
+                                    }
+                                },
+                            ]
+
                         }
                     }
                 }
@@ -145,7 +187,7 @@ exports.getOnlyCategoryOfOutlet = async (outletId) => {
                     hasProduct: 1,
                     categoryImage: 1,
                     categoryDesc: 1,
-                    categoryName: 1
+                    categoryName: 1,
                 }
             }
         ])
