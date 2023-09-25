@@ -301,7 +301,6 @@ exports.getFeaturedOutlet = async () => {
 }
 exports.allOutlet = async () => {
     try {
-
         const outletList = await outletModel.find({ isActive: true }).select('-_id -location  -openingHours._id -isActive -__v').lean()
         return outletList[0] ? responseFormater(true, "outlet list", outletList) : responseFormater(false, "outlet not found", [])
     } catch (error) {
@@ -343,6 +342,44 @@ exports.getOrderCount = async (outletId) => {
         return count ? count.items : false;
     } catch (error) {
         return false;
+    }
+}
+exports.getFilteredOutlet = async (longitude, latitude, filter) => {
+    try {
+        const query = filter.veg == "true" ? { isActive: true,  isVisible: true, isVerified: true, isClosed: false, isPureVeg: true } : { isActive: true,  isVisible: true, isVerified: true, isClosed: false }
+        const sort = filter.fast_delivery == 'true' ? { preparationTime: 1 } : { distance: 1 }
+        const nearByOutletList = await outletModel.aggregate(
+            [
+                {
+                    "$geoNear": {
+                        "near": {
+                            "type": "Point",
+                            "coordinates": [parseFloat(longitude), parseFloat(latitude)]
+                        },
+                        "distanceField": "distance",
+                        "spherical": true,
+                        "maxDistance": 4500,
+                        "query": query,
+
+                    },
+                },
+                {
+                    "$project": {
+                        "_id": 0,
+                        "isActive": 0,
+                        "openingHours._id": 0,
+                        "none": 0,
+                        "__v": 0
+                    }
+                },
+                {
+                    "$sort": sort
+                },
+            ])
+        return nearByOutletList[0] ? responseFormater(true, "list of nearby outlet", nearByOutletList) : responseFormater(false, "no outlet nearby", [])
+    } catch (error) {
+        console.log(error);
+        return responseFormater(false, "bad request", [])
     }
 }
 exports.nearByOutlet = async (longitude, latitude) => {

@@ -2,7 +2,7 @@ const { getAllBanner } = require("../helpers/banner.helper");
 const { getCuisineList, getCuisineForOutlet, addCuisine } = require("../helpers/cusion.helpers");
 const { discountByDiscountId } = require("../helpers/discount.helper");
 const { changeRatingInOrder } = require("../helpers/microservice.helper");
-const { addOutlet, outletsBySellerId, outletByOutletId, markOutletClosedOrOpen, allOutlet, nearByOutlet, getFeaturedOutlet, homeScreenFormanter, addDiscountToOutlet, removeDiscountToOutlet, outletByCuisineId, editOutletDetails, outletCheck, changeAllOutletStatus, outletStat, markOutletVerify, allOutletPaginated, openCloseOutlets, linkBank, transactionOfOutlets, outletIdBySellerId } = require("../helpers/outlet.helper");
+const { addOutlet, outletsBySellerId, outletByOutletId, markOutletClosedOrOpen, allOutlet, nearByOutlet, getFeaturedOutlet, homeScreenFormanter, addDiscountToOutlet, removeDiscountToOutlet, outletByCuisineId, editOutletDetails, outletCheck, changeAllOutletStatus, outletStat, markOutletVerify, allOutletPaginated, openCloseOutlets, linkBank, transactionOfOutlets, outletIdBySellerId, getFilteredOutlet } = require("../helpers/outlet.helper");
 const { addRating } = require("../helpers/rating.helper");
 const { success, badRequest, unknownError } = require("../helpers/response.helper");
 const { parseJwt } = require("../middleware/authToken");
@@ -237,6 +237,21 @@ exports.homeScreen = async (req, res) => {
     }
 }
 
+exports.filteredOutlet = async (req, res) => {
+    try {
+        // const testUpload = await imageUpload()
+        const { long, lat, ...filter } = req.query;
+        if (!long|| !lat) {
+            return badRequest(res, "long lat is required")
+        }
+        const {status,message,data} = await getFilteredOutlet(long, lat,filter)
+        return status ? success(res, message, data) : badRequest(res, message);
+    } catch (error) {
+        console.log(error);
+        return unknownError(res, error)
+    }
+}
+
 exports.sellerTransaction = async (req, res) => {
     try {
         const token = parseJwt(req.headers.authorization)
@@ -317,7 +332,7 @@ exports.addToSearch = async (req, res) => {
         const { status, message, data } = await allOutlet()
         const formattedData = data.map((outlet) => {
             return {
-                objectID:outlet.outletId,
+                objectID: outlet.outletId,
                 outletName: outlet.outletName,
                 outletImage: outlet.outletImage,
                 shopAddress: outlet.shopAddress
@@ -326,7 +341,7 @@ exports.addToSearch = async (req, res) => {
         const pushData = await addOutletData(formattedData)
         return status ? success(res, message, pushData) : badRequest(res, message)
     } catch (error) {
-       
+
         return unknownError(res, error.message)
     }
 }

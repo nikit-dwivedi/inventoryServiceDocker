@@ -8,6 +8,7 @@ const { authenticateSeller, authenticateUser, authenticateGuest, authenticateAdm
 
 //-----------------------------------------client--------------------------------------------//
 router.post('/home', authenticateGuest, outletController.homeScreen);
+router.get('/filtered',authenticateGuest,outletController.filteredOutlet)
 router.get('/discount/:outletId', authenticateGuest, outletController.outletDiscount);
 router.post('/cuisine', authenticateAdmin, outletController.newCuisine);
 router.get('/cuisine', authenticateGuest, outletController.cuisineList);
