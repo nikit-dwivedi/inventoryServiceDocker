@@ -346,7 +346,16 @@ exports.getOrderCount = async (outletId) => {
 }
 exports.getFilteredOutlet = async (longitude, latitude, filter) => {
     try {
-        const query = filter.veg == "true" ? { isActive: true,  isVisible: true, isVerified: true, isClosed: false, isPureVeg: true } : { isActive: true,  isVisible: true, isVerified: true, isClosed: false }
+        const query = { isActive: true, isVisible: true, isVerified: true, isClosed: false }
+        if (filter.veg == "true") {
+            query.isPureVeg = true
+        }
+        if (filter.discount_type === 'upto' || filter.discount_type === 'flat') {
+            query['discountDetails.isFlatDiscount'] = filter.discount_type === 'flat' ? true : false;
+        }
+        if (!isNaN(parseInt(filter.discount_percentage)) && parseInt(filter.discount_percentage) <= 100) {
+            query['discountDetails.discountPercent'] = filter.discount_percentage
+        }
         const sort = filter.fast_delivery == 'true' ? { preparationTime: 1 } : { distance: 1 }
         const nearByOutletList = await outletModel.aggregate(
             [
