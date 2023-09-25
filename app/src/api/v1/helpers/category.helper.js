@@ -119,9 +119,9 @@ exports.getOnlyCategoryOfOutlet = async (outletId) => {
                             {
                                 $size: '$products'
                             },
-                            {
-                                $size: '$subCategoryProducts'
-                            }
+                            // {
+                            //     $size: '$subCategoryProducts'
+                            // }
                         ]
                     },
                     availableProductsCount: {
@@ -136,15 +136,15 @@ exports.getOnlyCategoryOfOutlet = async (outletId) => {
                                         }
                                     }
                                 },
-                                {
-                                    $filter: {
-                                        input: '$subCategoryProducts',
-                                        as: 'data',
-                                        cond: {
-                                            $eq: ['$$data.inStock', true]
-                                        }
-                                    }
-                                },
+                                // {
+                                //     $filter: {
+                                //         input: '$subCategoryProducts',
+                                //         as: 'data',
+                                //         cond: {
+                                //             $eq: ['$$data.inStock', true]
+                                //         }
+                                //     }
+                                // },
                             ]
                         }
                     },
@@ -160,15 +160,15 @@ exports.getOnlyCategoryOfOutlet = async (outletId) => {
                                         }
                                     }
                                 },
-                                {
-                                    $filter: {
-                                        input: '$subCategoryProducts',
-                                        as: 'data',
-                                        cond: {
-                                            $eq: ['$$data.inStock', false]
-                                        }
-                                    }
-                                },
+                                // {
+                                //     $filter: {
+                                //         input: '$subCategoryProducts',
+                                //         as: 'data',
+                                //         cond: {
+                                //             $eq: ['$$data.inStock', false]
+                                //         }
+                                //     }
+                                // },
                             ]
 
                         }
