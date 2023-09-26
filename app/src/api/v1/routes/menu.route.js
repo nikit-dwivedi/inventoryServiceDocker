@@ -14,7 +14,7 @@ router.post('/category', menuController.addNewCategory);
 router.get('/category/:outletId', menuController.getCategory)
 router.get('/sub-category/:parentCategoryId', menuController.getSubCategory)
 router.get('/category/full/:parentCategoryId', menuController.getAllItemOfCategory)
-router.post('/category/edit',menuController.editCategory)
+router.post('/category/edit', menuController.editCategory)
 
 //---------------------------------------product--------------------------------------------//
 router.post('/product', uploads.single('productImage'), menuController.addNewProduct);
@@ -25,6 +25,8 @@ router.get('/product/addOn/:productId', menuController.getProductAddon);
 router.get('/stock/:productId', menuController.stockChange);
 router.get('/prod/:parentCategoryId', menuController.getProductByCategory)
 router.get('/product/:productId', menuController.getProduct)
+router.get('/product/search/add', menuController.addToSearch)
+router.get('/product/search/result', menuController.getSearchData)
 
 //------------------------------------customization----------------------------------------//
 router.post('/customization', menuController.addCustomization)

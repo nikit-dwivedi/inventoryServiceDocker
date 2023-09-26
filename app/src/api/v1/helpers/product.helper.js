@@ -1,11 +1,12 @@
 const productModel = require('../models/product.model');
 const { randomBytes } = require('node:crypto');
 const { getCategoryById, addProductToCategory } = require('./category.helper');
-const { customizationFormatter, customItemFormatter, responseFormater } = require('./format.helper');
+const { customizationFormatter, customItemFormatter, responseFormater, formatProductForAlgolia } = require('./format.helper');
 const outletModel = require('../models/outlet.model');
 const variationModel = require('../models/variation.model');
 const variantModel = require('../models/variant.model');
 const { getAddOnTotal } = require('./addOne.helper');
+const { addSingleProduct, updateProductOnAlgolia, addProductData } = require('../services/algoila.service');
 
 
 // ---------------------------------------------------------product---------------------------------------------------------
@@ -36,6 +37,8 @@ exports.addProduct = async (bodyData) => {
         }
         const saveProduct = new productModel(formattedData)
         await saveProduct.save()
+        const algoliaFormat = formatProductForAlgolia(formattedData)
+        await addSingleProduct(algoliaFormat)
         await addProductToCategory(parentCategoryId)
         return { status: true, message: "product added", data: formattedData.productId }
     } catch (error) {
@@ -83,6 +86,8 @@ exports.editProductByProductId = async (productId, bodyData) => {
             isVeg,
         }
         await productModel.findOneAndUpdate({ productId }, formattedData)
+        const algoliaFormat = formatProductForAlgolia({ productId, ...formattedData })
+        await updateProductOnAlgolia(algoliaFormat)
         return { status: true, message: "product added", data: {} }
     } catch (error) {
         console.log(error);
@@ -200,6 +205,17 @@ exports.productsByOutletId = async (outletIdList) => {
         return productData[0] ? { status: true, message: "out of stock product list", data: productData } : { status: false, message: "no product found", data: {} }
     } catch (error) {
         return { status: false, message: error.message, data: {} }
+    }
+}
+
+exports.batchUploadProductToAlgolia = async () => {
+    try {
+        const productList = await productModel.find({ isActive: true }).lean()
+        const formattedData = productList.map((product) => formatProductForAlgolia(product))
+        const pushData = await addProductData(formattedData)
+        return responseFormater(true, "data added", pushData)
+    } catch (error) {
+        return responseFormater(false, error.message)
     }
 }
 

@@ -2,9 +2,10 @@ const { addAddonCategory, addAddonProduct, getAllAddOnOfOutlet, getAddonCategory
 const { addCategory, getAllCategoryOfOutlet, getAllSubCategory, getOnlyCategoryOfOutlet, getSubCategoryOfOutlet, getProductOfCategory, editCategoryById, categoryByCategoryName, getAllCategoryOfOutletWithoutPagination, getFullItemOfCategory } = require("../helpers/category.helper");
 const { menuFormater } = require("../helpers/menu.helper");
 const { cartInit, outletByOutletId } = require("../helpers/outlet.helper");
-const { addProduct, allProductOfCategory, productById, customizationByProductId, customItemBycostomItemId, filterCustomItem, addCustomizationByProductId, editCustomizationByProductId, addCustomItemBycustomizationId, editCustomItemByCustomItemId, changeStockStatus, getOutOfStockProduct, customItemByCustomId, customizationByCustomizationId, productByLastVariation, addRemoveAddOnToProduct, editProductByProductId, checkProductByName } = require("../helpers/product.helper");
+const { addProduct, allProductOfCategory, productById, customizationByProductId, customItemBycostomItemId, filterCustomItem, addCustomizationByProductId, editCustomizationByProductId, addCustomItemBycustomizationId, editCustomItemByCustomItemId, changeStockStatus, getOutOfStockProduct, customItemByCustomId, customizationByCustomizationId, productByLastVariation, addRemoveAddOnToProduct, editProductByProductId, checkProductByName, batchUploadProductToAlgolia } = require("../helpers/product.helper");
 const { success, badRequest, unknownError } = require("../helpers/response.helper");
 const { parseJwt } = require("../middleware/authToken");
+const { searchProduct } = require("../services/algoila.service");
 const { imageUpload } = require("../services/image.service");
 
 exports.getMenu = async (req, res) => {
@@ -186,6 +187,26 @@ exports.linkUnlinkAddOn = async (req, res) => {
         const { status, message } = await addRemoveAddOnToProduct(productId, addOnCategoryId, operation)
         return status ? success(res, message) : badRequest(res, message)
     } catch (error) {
+        return unknownError(res, error.message)
+    }
+}
+
+exports.addToSearch = async (req, res) => {
+    try {
+        const { status, message, data } = await batchUploadProductToAlgolia()
+        return status ? success(res, message, data) : badRequest(res, message)
+    } catch (error) {
+        return unknownError(res, error.message)
+    }
+}
+
+exports.getSearchData = async (req, res) => {
+    try {
+        console.log("searchResult");
+        const searchResult = await searchProduct(req.query.name)
+        return searchResult ? success(res, "search result", searchResult) : badRequest(res, "nothing found")
+    } catch (error) {
+        console.log(error);
         return unknownError(res, error.message)
     }
 }

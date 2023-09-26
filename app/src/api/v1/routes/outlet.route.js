@@ -8,7 +8,7 @@ const { authenticateSeller, authenticateUser, authenticateGuest, authenticateAdm
 
 //-----------------------------------------client--------------------------------------------//
 router.post('/home', authenticateGuest, outletController.homeScreen);
-router.get('/filtered',authenticateGuest,outletController.filteredOutlet)
+router.get('/filtered', authenticateGuest, outletController.filteredOutlet)
 router.get('/discount/:outletId', authenticateGuest, outletController.outletDiscount);
 router.post('/cuisine', authenticateAdmin, outletController.newCuisine);
 router.get('/cuisine', authenticateGuest, outletController.cuisineList);
@@ -34,8 +34,8 @@ router.post('/nearby', outletController.outletNearby)
 router.post('/close', authenticateAdmin, outletController.closeAllOutlet)
 router.get('/yeloOutlet', outletController.addYeloShop);
 router.get('/stat', authenticateAdmin, outletController.getStat)
-router.get('/full/search', outletController.addToSearch)
-router.get('/full/search/result', outletController.getSearchData)
+router.get('/search/add', outletController.addToSearch)
+router.get('/search/result', outletController.getSearchData)
 
 
 

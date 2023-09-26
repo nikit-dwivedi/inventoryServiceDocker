@@ -1,15 +1,18 @@
 const outletModel = require('../models/outlet.model');
-const { outletFormmater, responseFormater, updatedOutletFormatter } = require('./format.helper');
+const { outletFormmater, responseFormater, updatedOutletFormatter, formatOutletForAlgolia } = require('./format.helper');
 const { get } = require('../services/axios.service');
 const { orderCountUrl } = require('../services/url.service');
 const { discountByDiscountId } = require('./discount.helper');
 const { checkBankByBankId, getAllTransactionOfOutlet } = require('../services/payment.service');
+const { addOutletData, addSingleOutlet, updateOutletOnAlgolia } = require('../services/algoila.service');
 
 exports.addOutlet = async (sellerId, bodyData, cuisineList) => {
     try {
         const outletFormat = outletFormmater(sellerId, bodyData, cuisineList);
         const saveData = new outletModel(outletFormat);
         await saveData.save()
+        const algoliaFormat = formatOutletForAlgolia(outletFormat)
+        await addSingleOutlet(algoliaFormat)
         return responseFormater(true, "outlet added succesfully", {})
     } catch (error) {
         return responseFormater(false, error.message)
@@ -551,6 +554,8 @@ exports.editOutletDetails = async (outletId, updateData, cuisineList) => {
         }
         const formateUpdatedOutlet = updatedOutletFormatter(updateData, cuisineList)
         await outletModel.findOneAndUpdate({ outletId }, formateUpdatedOutlet, { new: true })
+        const algoliaFormat = formatOutletForAlgolia({ outletId, ...formateUpdatedOutlet })
+        await updateOutletOnAlgolia(algoliaFormat)
         return responseFormater(true, "outlet updated")
     } catch (error) {
         console.log(error);
@@ -747,6 +752,16 @@ exports.openCloseOutlets = async () => {
     }
 }
 
+exports.batchUploadToAlgolia = async () => {
+    try {
+        const outletList = await outletModel.find({ isActive: true }).lean()
+        const formattedData = outletList.map((outlet) => formatOutletForAlgolia(outlet))
+        const pushData = await addOutletData(formattedData)
+        return responseFormater(true, "data added", pushData)
+    } catch (error) {
+        return responseFormater(false, error.message)
+    }
+}
 function distance(lon1, lat1, lon2, lat2) {
     lon1 = lon1 * Math.PI / 180;
     lon2 = lon2 * Math.PI / 180;

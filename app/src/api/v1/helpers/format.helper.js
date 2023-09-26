@@ -4,7 +4,7 @@ exports.responseFormater = (status, message, data = {}) => {
     return { status, message, data }
 }
 exports.outletFormmater = (sellerId, bodyData, cuisines) => {
-    const { outletName, phone, type, isFood = false, area, shopAddress, outletImage,outletBanner, longitude, latitude, preparationTime, isPureVeg = false, isDiscounted = false, discountId = "", tag = [] } = bodyData;
+    const { outletName, phone, type, isFood = false, area, shopAddress, outletImage, outletBanner, longitude, latitude, preparationTime, isPureVeg = false, isDiscounted = false, discountId = "", tag = [] } = bodyData;
     const location = {
         'type': 'Point',
         'coordinates': [parseFloat(longitude), parseFloat(latitude)]
@@ -19,11 +19,11 @@ exports.outletFormmater = (sellerId, bodyData, cuisines) => {
         6: bodyData.openingHours,
     }
     const outletId = randomBytes(6).toString('hex');
-    return { sellerId, outletImage, phone, outletId, outletName, type, isFood, cuisines,outletBanner, shopAddress, longitude, latitude, openingHours, location, preparationTime, area, isPureVeg, isDiscounted, discountId, tag }
+    return { sellerId, outletImage, phone, outletId, outletName, type, isFood, cuisines, outletBanner, shopAddress, longitude, latitude, openingHours, location, preparationTime, area, isPureVeg, isDiscounted, discountId, tag }
 }
 exports.updatedOutletFormatter = (outletData, cuisineList) => {
     const cuisines = cuisineList[0] ? cuisineList : undefined;
-    let { outletName, shopAddress, phone, outletImage, outletBanner,longitude, latitude, preparationTime, isPureVeg, openingHours } = outletData;
+    let { outletName, shopAddress, phone, outletImage, outletBanner, longitude, latitude, preparationTime, isPureVeg, openingHours } = outletData;
     let location = undefined
     if (longitude && latitude) {
         location = {
@@ -35,7 +35,7 @@ exports.updatedOutletFormatter = (outletData, cuisineList) => {
 
         openingHours = JSON.parse(openingHours)
     }
-    return { outletImage,outletBanner, outletName, phone, shopAddress, longitude, latitude, location, preparationTime, isPureVeg, cuisines, openingHours }
+    return { outletImage, outletBanner, outletName, phone, shopAddress, longitude, latitude, location, preparationTime, isPureVeg, cuisines, openingHours }
 }
 exports.customizationFormatter = (parentId, customizationData) => {
     try {
@@ -130,4 +130,14 @@ exports.cuisineFormatter = (cuisineData) => {
     const { cuisineName, cuisineImage, cuisineDescription } = cuisineData
     const cuisineId = randomBytes(6).toString('hex');
     return { cuisineId, cuisineName, cuisineImage, cuisineDescription }
+}
+
+exports.formatOutletForAlgolia = (outletData) => {
+    const { outletId, outletName, outletImage, shopAddress } = outletData
+    return { objectID: outletId, outletName, outletImage, shopAddress }
+}
+
+exports.formatProductForAlgolia = (productData) => {
+    const { productId, outletId, productName, productDesc, productImage, productPrice, isVeg, inStock } = productData
+    return { objectID: productId, outletId, productName, productDesc, productImage, productPrice, isVeg, inStock }
 }
