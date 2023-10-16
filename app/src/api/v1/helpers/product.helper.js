@@ -299,6 +299,9 @@ exports.productByLastVariation = async (productId, previousData) => {
         if (productData) {
             if (previousData) {
                 productData._doc.variationDetail = previousData
+                productData.hasCustomization = true
+            } else {
+                productData.hasCustomization = false
             }
             return productData
         }
