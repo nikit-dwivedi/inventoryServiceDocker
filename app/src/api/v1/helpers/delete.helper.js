@@ -907,6 +907,7 @@ exports.deleteAddOnProduct = async (addOnProductId) => {
 exports.deleteDiscount = async (discountId) => {
     try {
         await discountModel.findOneAndDelete({ discountId })
+        await outletModel.updateMany({discountId},{"discountId":"",isDiscounted:false,discountDetails:{}})
         return responseFormater(true, "data list")
     } catch (error) {
         return responseFormater(false, error.message)
