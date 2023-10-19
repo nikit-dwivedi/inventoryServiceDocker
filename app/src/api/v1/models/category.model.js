@@ -3,6 +3,10 @@ const mongoosePaginate = require('mongoose-paginate-v2');
 const Schema = mongoose.Schema;
 
 const categorySchema = new Schema({
+    displayIndex: {
+        type: Number,
+        required: true
+    },
     outletId: {
         type: String,
         require: true

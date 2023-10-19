@@ -10,8 +10,9 @@ exports.addCategory = async (bodyData) => {
             let parentCategoryData = await categoryModel.findOne({ categoryId: parentCategoryId }).lean()
             outletId = parentCategoryData.outletId;
         }
+        const displayIndex = await categoryModel.count({ outletId, parentCategoryId })
         const categoryId = randomBytes(6).toString('hex')
-        const formattedData = { outletId, categoryId, parentCategoryId, categoryName, categoryDesc, categoryImage }
+        const formattedData = { outletId, categoryId, parentCategoryId, categoryName, categoryDesc, categoryImage, displayIndex }
         const saveData = new categoryModel(formattedData);
         await saveData.save()
         if (parentCategoryId !== "") {
@@ -77,7 +78,6 @@ exports.getAllCategoryOfOutletWithoutPagination = async (outletId, page) => {
 }
 exports.getOnlyCategoryOfOutlet = async (outletId) => {
     try {
-        // const data = await categoryModel.find({ outletId, parentCategoryId: "" }).select('-_id categoryId hasSubCategory hasProduct categoryImage categoryDesc categoryName');
         const data = await categoryModel.aggregate([
             {
                 $match: {
@@ -185,9 +185,15 @@ exports.getOnlyCategoryOfOutlet = async (outletId) => {
                     categoryId: 1,
                     hasSubCategory: 1,
                     hasProduct: 1,
+                    displayIndex: 1,
                     categoryImage: 1,
                     categoryDesc: 1,
                     categoryName: 1,
+                }
+            },
+            {
+                $sort: {
+                    displayIndex: 1 // Sort by displayIndex in ascending order
                 }
             }
         ])
@@ -262,10 +268,16 @@ exports.getSubCategoryOfOutlet = async (parentCategoryId) => {
                     outOfStockProductsCount: 1,
                     categoryId: 1,
                     hasSubCategory: 1,
+                    displayIndex: 1,
                     hasProduct: 1,
                     categoryImage: 1,
                     categoryDesc: 1,
                     categoryName: 1
+                }
+            },
+            {
+                $sort: {
+                    displayIndex: 1 // Sort by displayIndex in ascending order
                 }
             }
         ])
@@ -311,9 +323,15 @@ exports.getFullItemOfCategory = async (categoryId) => {
                             categoryId: 1,
                             categoryName: 1,
                             hasSubCategory: 1,
+                            displayIndex: 1,
                             hasProduct: 1,
                             categoryImage: 1,
                             products: 1
+                        }
+                    },
+                    {
+                        $sort: {
+                            displayIndex: 1 // Sort by displayIndex in ascending order
                         }
                     }],
                     as: 'subCategory'
@@ -377,12 +395,18 @@ exports.getFullItemOfCategory = async (categoryId) => {
                     outOfStockProductsCount: 1,
                     categoryId: 1,
                     hasSubCategory: 1,
+                    displayIndex: 1,
                     hasProduct: 1,
                     categoryImage: 1,
                     categoryDesc: 1,
                     categoryName: 1,
                     products: 1,
                     subCategory: 1
+                }
+            },
+            {
+                $sort: {
+                    displayIndex: 1 // Sort by displayIndex in ascending order
                 }
             }
         ])
@@ -401,11 +425,16 @@ exports.getCategoryById = async (categoryId) => {
     }
 }
 
-exports.editCategoryById = async (categoryId, categoryName) => {
+exports.editCategoryById = async (categoryId, categoryName, displayIndex) => {
     try {
-        const categoryCheck = await categoryModel.exists({ categoryId })
-        if (!categoryCheck) {
+        const categoryData = await categoryModel.findOne({ categoryId }).lean()
+        if (!categoryData) {
             return responseFormater(false, "category not found")
+        }
+        if (displayIndex) {
+            const changeIndexOps = await changeDisplayIndex(categoryData, displayIndex)
+            return changeIndexOps?responseFormater(true, "index changed"):responseFormater(false, "index not changed")
+
         }
         await categoryModel.findOneAndUpdate({ categoryId }, { categoryName })
         return responseFormater(true, "category name changed")
@@ -429,6 +458,54 @@ exports.categoryByCategoryName = async (bodyData) => {
     }
 }
 
+async function changeDisplayIndex(categoryData, newIndex) {
+    try {
+        // const matchQuery = categoryData.parentCategoryId == "" ? { outletId: categoryData.outletId, parentCategoryId: categoryData.parentCategoryId }
+        const displayIndexQuery = categoryData.displayIndex < newIndex ? [
+            { displayIndex: { $lte: newIndex } },
+            { displayIndex: { $gte: categoryData.displayIndex } }
+        ] :
+            [
+                { displayIndex: { $lte: categoryData.displayIndex } },
+                { displayIndex: { $gte: newIndex } }
+            ]
+
+        const operationQuery = categoryData.displayIndex < newIndex ? { $subtract: ["$displayIndex", 1] } : { $add: ["$displayIndex", 1] }
+        const data = await categoryModel.aggregate([
+            {
+                $match: {
+                    outletId: categoryData.outletId,
+                    parentCategoryId: categoryData.parentCategoryId,
+                    $and: displayIndexQuery
+                },
+
+            },
+            {
+                $project: {
+                    _id: 0,
+                    categoryId: 1,
+                    displayIndex: {
+                        $cond: {
+                            if: { $eq: [categoryData.categoryId, "$categoryId"] },
+                            then: newIndex,
+                            else: operationQuery
+                        }
+                    }
+                }
+            }
+        ])
+        const bulkOps = data.map(item => ({
+            updateOne: {
+                filter: { categoryId: item.categoryId },
+                update: { $set: { displayIndex: item.displayIndex } },
+            },
+        }));
+        await categoryModel.bulkWrite(bulkOps)
+        return true
+    } catch (error) {
+        throw error
+    }
+}
 
 
 

@@ -91,12 +91,15 @@ exports.addNewCategory = async (req, res) => {
 }
 exports.editCategory = async (req, res) => {
     try {
-        const { categoryId, categoryName } = req.body
+        const { categoryId, categoryName, displayIndex } = req.body
+        if (categoryName&&displayIndex) {
+            return badRequest(res, "displayIndex cant be changed while updating any other field")
+        }
         const categoryCheck = await categoryByCategoryName(req.body)
         if (categoryCheck) {
             return badRequest(res, "category already exist")
         }
-        const { status, message } = await editCategoryById(categoryId, categoryName);
+        const { status, message } = await editCategoryById(categoryId, categoryName, displayIndex);
         return status ? success(res, message) : badRequest(res, message);
     } catch (error) {
         return unknownError(res, error.message)
