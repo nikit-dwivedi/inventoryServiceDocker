@@ -185,6 +185,8 @@ exports.getOnlyCategoryOfOutlet = async (outletId) => {
                     categoryId: 1,
                     hasSubCategory: 1,
                     hasProduct: 1,
+                    parentCategoryId:1,
+
                     displayIndex: 1,
                     categoryImage: 1,
                     categoryDesc: 1,
@@ -268,6 +270,8 @@ exports.getSubCategoryOfOutlet = async (parentCategoryId) => {
                     outOfStockProductsCount: 1,
                     categoryId: 1,
                     hasSubCategory: 1,
+                    parentCategoryId:1,
+
                     displayIndex: 1,
                     hasProduct: 1,
                     categoryImage: 1,
@@ -324,6 +328,8 @@ exports.getFullItemOfCategory = async (categoryId) => {
                             categoryName: 1,
                             hasSubCategory: 1,
                             displayIndex: 1,
+                    parentCategoryId:1,
+
                             hasProduct: 1,
                             categoryImage: 1,
                             products: 1
@@ -393,6 +399,7 @@ exports.getFullItemOfCategory = async (categoryId) => {
                     totalProductsCount: 1,
                     availableProductsCount: 1,
                     outOfStockProductsCount: 1,
+                    parentCategoryId:1,
                     categoryId: 1,
                     hasSubCategory: 1,
                     displayIndex: 1,
