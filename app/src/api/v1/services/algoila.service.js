@@ -1,8 +1,8 @@
 const algoliaSearch = require('algoliasearch');
 require('dotenv').config();
 
-const appId = process.env.APP_ID
-const adminApiKey = process.env.ADMIN_API_KEY
+const appId = process.env.ALGOILA_APP_ID
+const adminApiKey = process.env.ALGOILA_ADMIN_API_KEY
 
 const client = algoliaSearch(appId, adminApiKey);
 
@@ -32,7 +32,7 @@ exports.addSingleOutlet = async (outletData) => {
     }
 }
 
-// outlet multiple
+// product multiple
 exports.addProductData = async (productList) => {
     try {
         const addedData = await productIndex.saveObjects(productList)
@@ -42,7 +42,7 @@ exports.addProductData = async (productList) => {
     }
 }
 
-// outlet single
+// product single
 exports.addSingleProduct = async (productData) => {
     try {
         const addedData = await productIndex.saveObject(productData)
