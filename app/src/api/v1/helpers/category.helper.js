@@ -76,8 +76,9 @@ exports.getAllCategoryOfOutletWithoutPagination = async (outletId, page) => {
         return false
     }
 }
-exports.getOnlyCategoryOfOutlet = async (outletId) => {
+exports.getOnlyCategoryOfOutlet = async (outletId, type) => {
     try {
+        const categoryFilterQuery = type && type === "customer" ? { $gt: 0 } : { $gte: 0 }
         const data = await categoryModel.aggregate([
             {
                 $match: {
@@ -176,6 +177,11 @@ exports.getOnlyCategoryOfOutlet = async (outletId) => {
                 }
             },
             {
+                $match: {
+                    availableProductsCount: categoryFilterQuery // Filter documents with availableProductsCount greater than 0
+                }
+            },
+            {
                 $project: {
                     _id: 0,
                     subCategoriesCount: 1,
@@ -185,8 +191,7 @@ exports.getOnlyCategoryOfOutlet = async (outletId) => {
                     categoryId: 1,
                     hasSubCategory: 1,
                     hasProduct: 1,
-                    parentCategoryId:1,
-
+                    parentCategoryId: 1,
                     displayIndex: 1,
                     categoryImage: 1,
                     categoryDesc: 1,
@@ -270,7 +275,7 @@ exports.getSubCategoryOfOutlet = async (parentCategoryId) => {
                     outOfStockProductsCount: 1,
                     categoryId: 1,
                     hasSubCategory: 1,
-                    parentCategoryId:1,
+                    parentCategoryId: 1,
 
                     displayIndex: 1,
                     hasProduct: 1,
@@ -328,7 +333,7 @@ exports.getFullItemOfCategory = async (categoryId) => {
                             categoryName: 1,
                             hasSubCategory: 1,
                             displayIndex: 1,
-                    parentCategoryId:1,
+                            parentCategoryId: 1,
 
                             hasProduct: 1,
                             categoryImage: 1,
@@ -399,7 +404,7 @@ exports.getFullItemOfCategory = async (categoryId) => {
                     totalProductsCount: 1,
                     availableProductsCount: 1,
                     outOfStockProductsCount: 1,
-                    parentCategoryId:1,
+                    parentCategoryId: 1,
                     categoryId: 1,
                     hasSubCategory: 1,
                     displayIndex: 1,
@@ -440,7 +445,7 @@ exports.editCategoryById = async (categoryId, categoryName, displayIndex) => {
         }
         if (displayIndex) {
             const changeIndexOps = await changeDisplayIndex(categoryData, displayIndex)
-            return changeIndexOps?responseFormater(true, "index changed"):responseFormater(false, "index not changed")
+            return changeIndexOps ? responseFormater(true, "index changed") : responseFormater(false, "index not changed")
 
         }
         await categoryModel.findOneAndUpdate({ categoryId }, { categoryName })

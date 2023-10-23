@@ -53,7 +53,8 @@ exports.getFullMenu = async (req, res) => {
 exports.getCategory = async (req, res) => {
     try {
         const { outletId } = req.params
-        let categoryData = await getOnlyCategoryOfOutlet(outletId)
+        const { type } = req.query
+        let categoryData = await getOnlyCategoryOfOutlet(outletId,type)
         return categoryData ? success(res, "success", categoryData) : badRequest(res, "no category found");
     } catch (error) {
         return unknownError(res, error)
@@ -92,7 +93,7 @@ exports.addNewCategory = async (req, res) => {
 exports.editCategory = async (req, res) => {
     try {
         const { categoryId, categoryName, displayIndex } = req.body
-        if (categoryName&&displayIndex) {
+        if (categoryName && displayIndex) {
             return badRequest(res, "displayIndex cant be changed while updating any other field")
         }
         const categoryCheck = await categoryByCategoryName(req.body)
