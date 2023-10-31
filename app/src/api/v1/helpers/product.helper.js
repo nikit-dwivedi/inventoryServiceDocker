@@ -38,6 +38,7 @@ exports.addProduct = async (bodyData) => {
         const saveProduct = new productModel(formattedData)
         await saveProduct.save()
         formattedData.outletName = outletData.outletName
+        formattedData.area =outletDetails.area
         const algoliaFormat = formatProductForAlgolia(formattedData)
         await addSingleProduct(algoliaFormat)
         await addProductToCategory(parentCategoryId)
@@ -228,7 +229,8 @@ exports.batchUploadProductToAlgolia = async () => {
             { $unwind: '$outletDetails' },
             {
                 $addFields: {
-                    outletName: '$outletDetails.outletName'
+                    outletName: '$outletDetails.outletName',
+                    area:'$outletDetails.area'
                 }
             },
             {
@@ -243,6 +245,7 @@ exports.batchUploadProductToAlgolia = async () => {
                     isVeg: 1,
                     inStock: 1,
                     outletName: 1,
+                    area:1
                 }
             }
             ],
