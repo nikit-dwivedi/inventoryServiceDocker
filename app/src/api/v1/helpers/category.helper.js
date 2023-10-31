@@ -427,11 +427,11 @@ exports.getFullItemOfCategory = async (categoryId) => {
         return false
     }
 }
-exports.getCategoryById = async (categoryId) => {
+exports.getCategoryById = async (categoryId, full) => {
     try {
         const data = await categoryModel.findOne({ categoryId })
         console.log(data);
-        return data ? data.outletId : false;
+        return data ? full ? data : data.outletId : false;
     } catch (error) {
         return false
     }

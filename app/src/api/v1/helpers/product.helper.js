@@ -16,16 +16,16 @@ exports.addProduct = async (bodyData) => {
         const { parentCategoryId, productName, productPrice, isVeg = true, hasCustomization = false } = bodyData
         let { productImage, productDesc } = bodyData
         const productId = randomBytes(6).toString('hex')
-        const outletId = await getCategoryById(parentCategoryId)
+        const outletData = await getCategoryById(parentCategoryId, true)
         if (!outletId) {
             return { status: false, message: "outlet not found" }
         }
         let displayPrice = productPrice
         productImage = productImage ? productImage : ""
         productDesc = productDesc ? productDesc : ""
-        const formattedData = {
+        let formattedData = {
             productId,
-            outletId,
+            outletId: outletData.outletId,
             parentCategoryId,
             productName,
             productDesc,
@@ -37,6 +37,7 @@ exports.addProduct = async (bodyData) => {
         }
         const saveProduct = new productModel(formattedData)
         await saveProduct.save()
+        formattedData.outletName = outletData.outletName
         const algoliaFormat = formatProductForAlgolia(formattedData)
         await addSingleProduct(algoliaFormat)
         await addProductToCategory(parentCategoryId)
@@ -210,7 +211,42 @@ exports.productsByOutletId = async (outletIdList) => {
 
 exports.batchUploadProductToAlgolia = async () => {
     try {
-        const productList = await productModel.find({ isActive: true }).lean()
+        const productList = await productModel.aggregate(
+            [{
+                $match: {
+                    isActive: true
+                }
+            },
+            {
+                $lookup: {
+                    from: 'outlets',
+                    localField: 'outletId',
+                    foreignField: 'outletId',
+                    as: 'outletDetails'
+                }
+            },
+            { $unwind: '$outletDetails' },
+            {
+                $addFields: {
+                    outletName: '$outletDetails.outletName'
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    productId: 1,
+                    outletId: 1,
+                    productName: 1,
+                    productDesc: 1,
+                    productImage: 1,
+                    productPrice: 1,
+                    isVeg: 1,
+                    inStock: 1,
+                    outletName: 1,
+                }
+            }
+            ],
+        );
         const formattedData = productList.map((product) => formatProductForAlgolia(product))
         const pushData = await addProductData(formattedData)
         return responseFormater(true, "data added", pushData)

@@ -138,6 +138,6 @@ exports.formatOutletForAlgolia = (outletData) => {
 }
 
 exports.formatProductForAlgolia = (productData) => {
-    const { productId, outletId, productName, productDesc, productImage, productPrice, isVeg, inStock } = productData
-    return { objectID: productId, outletId, productName, productDesc, productImage, productPrice, isVeg, inStock }
+    const { productId, outletId, productName, productDesc, productImage, productPrice, isVeg, inStock,outletName } = productData
+    return { objectID: productId, outletId, productName, productDesc, productImage, productPrice, isVeg, inStock,outletName }
 }
