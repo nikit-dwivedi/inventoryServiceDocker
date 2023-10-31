@@ -2,7 +2,7 @@ const { getAllBanner } = require("../helpers/banner.helper");
 const { getCuisineList, getCuisineForOutlet, addCuisine } = require("../helpers/cusion.helpers");
 const { discountByDiscountId } = require("../helpers/discount.helper");
 const { changeRatingInOrder } = require("../helpers/microservice.helper");
-const { addOutlet, outletsBySellerId, outletByOutletId, markOutletClosedOrOpen, allOutlet, nearByOutlet, getFeaturedOutlet, homeScreenFormanter, addDiscountToOutlet, removeDiscountToOutlet, outletByCuisineId, editOutletDetails, outletCheck, changeAllOutletStatus, outletStat, markOutletVerify, allOutletPaginated, openCloseOutlets, linkBank, transactionOfOutlets, outletIdBySellerId, getFilteredOutlet, batchUploadToAlgolia } = require("../helpers/outlet.helper");
+const { addOutlet, outletsBySellerId, outletByOutletId, markOutletClosedOrOpen, allOutlet, nearByOutlet, getFeaturedOutlet, homeScreenFormanter, addDiscountToOutlet, removeDiscountToOutlet, outletByCuisineId, editOutletDetails, outletCheck, changeAllOutletStatus, outletStat, markOutletVerify, allOutletPaginated, openCloseOutlets, linkBank, transactionOfOutlets, outletIdBySellerId, getFilteredOutlet, batchUploadToAlgolia, getConfig } = require("../helpers/outlet.helper");
 const { addRating } = require("../helpers/rating.helper");
 const { success, badRequest, unknownError } = require("../helpers/response.helper");
 const { parseJwt } = require("../middleware/authToken");
@@ -95,6 +95,10 @@ exports.changeClosedStatus = async (req, res) => {
         const token = parseJwt(req.headers.authorization)
         const sellerId = token.customId
         const adminCheck = token.role == 3 ? true : false
+        const configCheck = await getConfig()
+        if (configCheck.status && !configCheck.data.marketPlaceStatus) {
+            return badRequest(res, "marketplace closed")
+        }
         const { status, message, data } = await markOutletClosedOrOpen(sellerId, outletId, adminCheck);
         return status ? success(res, message, data) : badRequest(res, message)
     } catch (error) {

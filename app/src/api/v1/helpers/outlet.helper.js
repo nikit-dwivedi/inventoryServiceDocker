@@ -1,7 +1,7 @@
 const outletModel = require('../models/outlet.model');
 const { outletFormmater, responseFormater, updatedOutletFormatter, formatOutletForAlgolia } = require('./format.helper');
 const { get } = require('../services/axios.service');
-const { orderCountUrl } = require('../services/url.service');
+const { orderCountUrl, getConfigUrl } = require('../services/url.service');
 const { discountByDiscountId } = require('./discount.helper');
 const { checkBankByBankId, getAllTransactionOfOutlet } = require('../services/payment.service');
 const { addOutletData, addSingleOutlet, updateOutletOnAlgolia } = require('../services/algoila.service');
@@ -226,10 +226,11 @@ exports.markOutletClosedOrOpen = async (sellerId, outletId, adminCheck) => {
     try {
         const query = adminCheck ? { outletId, isActive: true } : { sellerId, outletId, isActive: true }
         const outletData = await outletModel.findOne(query).select('-longitude -latitude -openingHours._id -isActive -__v');
-        if (outletData) {
-            await outletModel.findOneAndUpdate({ outletId }, { isClosed: !outletData.isClosed })
+        if (!outletData) {
+            return responseFormater(false, "outlet not found", {})
         }
-        return outletData ? responseFormater(true, "status changed", {}) : responseFormater(false, "outlet not found", {})
+        await outletModel.findOneAndUpdate({ outletId }, { isClosed: !outletData.isClosed })
+        return responseFormater(true, "status changed", {})
     } catch (error) {
         throw (error)
         // return  (error.message)
@@ -775,6 +776,16 @@ function distance(lon1, lat1, lon2, lat2) {
     return (c * r).toFixed(1);
 }
 
+
+exports.getConfig = async () => {
+    try {
+        const url = getConfigUrl()
+        const response = await get(url)
+        return response.status ? responseFormater(true, response.items) : responseFormater(false, "config not found")
+    } catch (error) {
+        return responseFormater(false, error.message)
+    }
+}
 // function closingTime(timing) {
 //     const d = new Date
 //     let day = d.getDay()
