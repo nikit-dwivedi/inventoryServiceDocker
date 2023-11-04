@@ -781,7 +781,7 @@ exports.getConfig = async () => {
     try {
         const url = getConfigUrl()
         const response = await get(url)
-        return response.status ? responseFormater(true, response.items) : responseFormater(false, "config not found")
+        return response.status ? responseFormater(true, response.message, response.items) : responseFormater(false, "config not found")
     } catch (error) {
         return responseFormater(false, error.message)
     }
