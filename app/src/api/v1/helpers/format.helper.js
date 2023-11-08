@@ -84,17 +84,14 @@ exports.bannerFormatter = (bannerData, linkId) => {
     let redirect = ""
     switch (tag) {
         case "offer":
-            redirect = `/v1/discount/outlet/${linkId}`
+            redirect = linkId
             break;
         case "sponsor":
-            redirect = `/v1/outlet/single/${linkId}`
-            break;
-        case "":
-            tag = "default"
-            redirect = `/v1/outlet/all`
+            redirect = linkId
             break;
         default:
-            redirect = `/v1/outlet/all`
+            tag = "default"
+            redirect = ""
             break;
     }
     return { bannerID, type, tag, url, redirect }
