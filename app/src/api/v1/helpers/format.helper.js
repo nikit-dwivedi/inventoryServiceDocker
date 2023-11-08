@@ -80,7 +80,7 @@ exports.discountFormater = (customId, discountData) => {
 }
 exports.bannerFormatter = (bannerData, linkId) => {
     const bannerID = randomBytes(6).toString('hex');
-    let { type, tag, url } = bannerData
+    let { type, tag = "", url } = bannerData
     let redirect = ""
     switch (tag) {
         case "offer":
@@ -89,8 +89,11 @@ exports.bannerFormatter = (bannerData, linkId) => {
         case "sponsor":
             redirect = `/v1/outlet/single/${linkId}`
             break;
-        default:
+        case "":
             tag = "default"
+            redirect = `/v1/outlet/all`
+            break;
+        default:
             redirect = `/v1/outlet/all`
             break;
     }
@@ -138,6 +141,6 @@ exports.formatOutletForAlgolia = (outletData) => {
 }
 
 exports.formatProductForAlgolia = (productData) => {
-    const { productId, outletId, productName, productDesc, productImage, productPrice, isVeg, inStock, outletName, area,outletImage } = productData
-    return { objectID: productId, outletId, productName, productDesc, productImage, productPrice, isVeg, inStock, outletName, area ,outletImage}
+    const { productId, outletId, productName, productDesc, productImage, productPrice, isVeg, inStock, outletName, area, outletImage } = productData
+    return { objectID: productId, outletId, productName, productDesc, productImage, productPrice, isVeg, inStock, outletName, area, outletImage }
 }
